@@ -3,28 +3,29 @@
     <channel>
         <title>RestinPID</title>
         <item>
-            <title>3.2</title>
-            <pubDate>Wed, 04 Nov 2026 01:40:53 +1100</pubDate>
+            <title>3.3</title>
+            <pubDate>Wed, 04 Nov 2026 02:29:02 +1100</pubDate>
             <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
             <sparkle:informationalUpdate>
                 <sparkle:belowVersion>4</sparkle:belowVersion>
             </sparkle:informationalUpdate>
-            <sparkle:version>6</sparkle:version>
-            <sparkle:shortVersionString>3.2</sparkle:shortVersionString>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>3.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RestinPID 3.2</h2>
+            <description><![CDATA[<h2>RestinPID 3.3</h2>
 <ul>
-<li><b>RestinPID’s own use:</b> its RAM and CPU now show in their own strip at the bottom of the panel, with Restart and Force Quit buttons. It stays out of the app list and out of Restart All / Force Quit All.</li>
-<li><b>Restarts itself if it gets stuck:</b> RestinPID restarts itself if it stops responding for 10 seconds, uses over 500 MB of RAM, or stays above 50% CPU for a minute. This happens at most once every 10 minutes, and History says why. Turn it off in Settings → General.</li>
-<li><b>Sliders:</b> the RAM, CPU and “not responding” limits are now sliders that show their value.</li>
-<li><b>Shortcut reset:</b> a “Reset to ⌃⌥R” link brings back the default panel shortcut, including after you remove it.</li>
-<li><b>Fixed:</b> the Send Feedback window opened empty.</li>
+<li><b>Totals at a glance:</b> each group heading shows its total RAM and CPU. Or choose <i>Whole Mac</i> to see memory used and CPU load as Activity Monitor shows them. Settings → Usage.</li>
+<li><b>Menu bar reading:</b> optionally show RAM and CPU next to the menu bar icon, either for the apps in the list or for the whole Mac. Settings → Usage.</li>
+<li><b>Hide quiet apps:</b> show only busy apps. You decide what busy means: over your RAM limit <b>or</b> your CPU limit, or over <b>both</b> at once. Settings → Apps.</li>
+<li><b>Restart RestinPID</b> with the new button next to the gear.</li>
+<li><b>Tidier Settings:</b> new Apps and Usage tabs, and self-restart has moved to Auto-Restart.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.2/RestinPID-3.2.zip" length="1945645" type="application/octet-stream" sparkle:edSignature="5QqhG0hyps/Y3vBjJJeyejqdyeGblCzAmEmRm3BuTIaOy+1XKa9g9R4L7fMj5VNVeANMpG5hNlBPpP7829rWAA=="/>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.3/RestinPID-3.3.zip" length="1983776" type="application/octet-stream" sparkle:edSignature="6KNNn1Cco70jr0gNVQMk9vHep53QpqlAbSDwC66KBoPGcLqGap+TiAE16QssQo2Q1PhbYcCAC5J42ZCL3f/uBQ=="/>
             <sparkle:deltas>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.2/RestinPID6-5.delta" sparkle:deltaFrom="5" length="200558" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="aFZe6l8hFAtmMkfGC74mG/OHDZULpfuIGlmBBLCjZfu072yek/z7H/PVuWcUZQ3XzlGlSFowgYaxRCFkZ/4WCw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.2/RestinPID6-4.delta" sparkle:deltaFrom="4" length="247126" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ngm6jt1lEqF1SHMCRqGzJuwnIXw3BDZ8lpnerChUyYO7sG0o+6cBEOB+Jtefu7YVAtdeILHMvS/H8ykJJlswAg=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.3/RestinPID7-6.delta" sparkle:deltaFrom="6" length="230374" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="dNTV79bPATvxmeX1mt3rmpKxWCYlDZmHVgR8z1hVR/zb+UriAXdrsovQ84g0d6zwhrzpmR24CqthM+g0GLhDAw=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.3/RestinPID7-5.delta" sparkle:deltaFrom="5" length="260898" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="jFDvDNot/x7/HzM5KuIlMp+ZlDPRgdLDsyKEYASdr+mdLDYXv0spmgVwIiEkUbiKAmXtAWEUAtpMr6bx85hqAA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.3/RestinPID7-4.delta" sparkle:deltaFrom="4" length="296450" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="UwSMHSkIWlJTlS1+OjUc+K67vd8Id6e/3NAoqgmU9HkbmkW51NKdVPuy3nWCHnrd0l8ggajQKpRvXbtU4NeNDQ=="/>
             </sparkle:deltas>
         </item>
     </channel>
