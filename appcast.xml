@@ -3,27 +3,26 @@
     <channel>
         <title>RestinPID</title>
         <item>
-            <title>3.0</title>
-            <pubDate>Wed, 04 Nov 2026 01:11:02 +1100</pubDate>
+            <title>3.1</title>
+            <pubDate>Wed, 04 Nov 2026 01:26:22 +1100</pubDate>
             <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
             <sparkle:informationalUpdate>
                 <sparkle:belowVersion>4</sparkle:belowVersion>
             </sparkle:informationalUpdate>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>3.0</sparkle:shortVersionString>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>3.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>AppRestarter is now RestinPID</h2>
-<p><i>Rest in PID.</i> Same app, new name and identity. Coming from AppRestarter? Download RestinPID, move it to Applications and quit AppRestarter. Your settings and history come across on first launch; switch Accessibility on once for RestinPID.</p>
-<h3>New in 3.0</h3>
+            <description><![CDATA[<h2>RestinPID 3.1</h2>
 <ul>
-<li><b>Menu Bar &amp; Background</b> group: your menu bar and background apps (Paste, KeepingYouAwake, Raycast…) with RAM and CPU, ready to restart or force quit.</li>
-<li><b>macOS</b> group: apps that came with macOS (Finder, Dock, Control Centre…) appear when they pass a RAM or CPU limit or stop responding. Limits and visibility are in Settings → General.</li>
-<li><b>Send Feedback…</b> in the gear menu: report a problem or suggest a feature.</li>
-<li>Fewer false “Not Responding” badges for background apps.</li>
-<li>Restart All and Force Quit All never touch macOS apps; single actions on them always ask first.</li>
+<li><b>Appearance:</b> choose System, Light or Dark in Settings → General.</li>
+<li><b>Update schedule:</b> check every day, week, two weeks, month, or never, in Settings → Updates. You can also let updates download and install by themselves.</li>
+<li><b>See updates at a glance:</b> when a new version is out, a dot appears on the menu bar icon, a banner appears at the top of the panel, and you get a notification. Click any of them to read what’s new before installing.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.0/RestinPID-3.0.zip" length="1847157" type="application/octet-stream" sparkle:edSignature="y9wJOFAZUg4Wo7o0Sx75aewWjjf8ntOH8v9XCBWBY5UFxsxb8bBGU4WPkAFYZOTvNZ/TtwZk5Pe2yZApe0BDCQ=="/>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.1/RestinPID-3.1.zip" length="1895213" type="application/octet-stream" sparkle:edSignature="LxN/kiiKRvvUvJ7grKqCXZ9qOCyqatqdTrBzI02t7Z7P1dRpBszli9C/F/hueSYiO5MNwyKO8HJuGiGVP1l+BA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.1/RestinPID5-4.delta" sparkle:deltaFrom="4" length="176686" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="3dZxOTDJbyIW2SbxZ8/AEOxWEBiQeRh2cVdkG3iy4ZI7kf6r+75ZMwy79mbnpwnn21pkaXLaGr75r/9iaiJDCQ=="/>
+            </sparkle:deltas>
         </item>
     </channel>
 </rss>
