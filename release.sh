@@ -14,5 +14,5 @@ mkdir -p releases
 ditto -c -k --keepParent "$OUT/AppRestarter.app" "releases/AppRestarter-$VERSION.zip"
 .build/artifacts/sparkle/Sparkle/bin/generate_appcast \
   --download-url-prefix "https://github.com/prabeshbhetwal/AppRestarter/releases/download/v$VERSION/" \
-  -o appcast.xml releases
+  --maximum-versions 1 -o appcast.xml releases # only the latest item, so every URL points at this release
 echo "Release $VERSION ready: releases/AppRestarter-$VERSION.zip + appcast.xml"
