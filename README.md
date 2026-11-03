@@ -1,52 +1,108 @@
 # RestinPID
 
-*Rest in PID.* A macOS menu bar app that force quits and restarts your apps, even when they're frozen. Formerly AppRestarter.
+*Rest in PID.* A menu bar app for your Mac that force quits and restarts apps, even frozen ones. It also shows how much RAM and CPU each app is using.
 
-![Panel](screenshots/panel-light.png)
+<p>
+  <img src="screenshots/panel-light.png" width="360" alt="RestinPID panel in light mode">
+  <img src="screenshots/panel-dark.png" width="360" alt="RestinPID panel in dark mode">
+</p>
+
+## What it does
+
+Click the RestinPID icon in the menu bar, or press **⌃⌥R**. A panel lists the apps that are running right now:
+
+- **Apps:** the apps you use from the Dock.
+- **Menu Bar & Background:** apps that run quietly in the menu bar or background, such as Paste, Raycast or KeepingYouAwake.
+- **macOS:** apps that come with your Mac, such as Finder, Dock and Control Centre. They appear only when they use more RAM or CPU than your limit, or stop responding.
+
+Each app shows its **RAM** and **CPU** use, measured the way Activity Monitor measures them, helper processes included. A figure turns orange when it goes over your limit. A red **Not Responding** badge marks frozen apps.
+
+Click an app to restart it, or use its two buttons:
+
+- **Restart** quits the app, even a frozen one, and opens it again.
+- **Force Quit** quits the app without reopening it.
+
+**Restart All** and **Force Quit All** act on every app in the list at once, except macOS apps. They always ask first.
+
+RestinPID's own RAM and CPU show at the bottom of the panel, with its own Restart and Force Quit buttons.
 
 ## Features
 
-- Lists your running apps in three groups:
-  - **Apps:** Dock apps you installed.
-  - **Menu Bar & Background:** third-party menu bar and background apps such as Paste or KeepingYouAwake.
-  - **macOS:** apps that came with macOS, such as Finder, Dock or Spotlight. These only appear when they pass a RAM or CPU limit or stop responding; you can change the limits, or show them always or never.
-- Restart or force quit one app, or all of your own apps at once. macOS apps are never included in bulk actions.
-- RAM and CPU use for each app, counting its helper processes, as Activity Monitor measures them.
-- "Not Responding" badge, plus optional auto-restart when an app stays frozen.
-- Search, pinned apps, and full keyboard control (⌃⌥R opens the panel).
-- Exclude list, restart history, notifications and launch at login.
-- Send Feedback window, which opens a pre-filled GitHub issue.
-- Light, dark or system appearance.
-- RestinPID's own RAM and CPU in a strip of their own, with Restart and Force Quit. It can restart itself if it freezes or slows down.
-- Updates through Sparkle: check every day, week, two weeks or month, or never. A new version shows as a dot on the menu bar icon and a banner in the panel, with its release notes.
-
-Requires macOS 13 or later.
+- **Auto-restart frozen apps:** choose apps that restart by themselves when they stay frozen for a time you set.
+- **Restarts itself:** if RestinPID ever freezes or slows down, it restarts itself. You can turn this off.
+- **Search and pins:** type to filter the list, and pin the apps you use most to the top. Pin a macOS app to always see it.
+- **Exclude list:** hide apps you never want to see or touch.
+- **History:** a log of every restart and force quit, automatic ones included.
+- **Notifications:** an optional notice after each restart or force quit.
+- **Keyboard control:** use the whole panel without a mouse.
+- **Appearance:** Light, Dark, or follow your Mac.
+- **Launch at login.**
+- **Automatic updates,** on a schedule you choose.
 
 ## Install
 
-1. Download the latest `RestinPID-<version>.zip` from [Releases](https://github.com/prabeshbhetwal/RestinPID/releases).
-2. Unzip it and move `RestinPID.app` to Applications.
-3. The first time you open it, right-click it and choose **Open**. The app isn't notarised yet, so macOS warns you.
+1. Download the latest `RestinPID-<version>.zip` from [Releases](https://github.com/prabeshbhetwal/RestinPID/releases/latest).
+2. Unzip it and drag **RestinPID** into your **Applications** folder.
+3. The first time, **right-click** RestinPID and choose **Open**, then **Open** again. macOS asks this once for apps downloaded outside the App Store.
 
-To show the "Not Responding" badge and auto-restart frozen apps, RestinPID needs Accessibility access: Settings → Auto-Restart → Grant Access….
+**Allow Accessibility access** so RestinPID can tell when an app is not responding: go to **Settings → Auto-Restart → Open Accessibility Settings…** and switch RestinPID on. Without it, everything else still works, but there's no Not Responding badge and no auto-restart.
 
-Coming from AppRestarter 2.x? RestinPID has a new app identity, so it won't arrive as an update. Install it as above and quit AppRestarter. RestinPID copies your AppRestarter settings on its first launch. You'll need to grant Accessibility again once.
+Works on macOS 13 Ventura and later, on Apple silicon and Intel Macs.
+
+## Keyboard shortcuts
+
+| Keys | In the panel |
+|---|---|
+| ⌃⌥R | Open or close the panel (you can change this) |
+| ↑ ↓ | Move through the list |
+| ↩ | Restart the selected app |
+| ⌘↩ or ⌘⌫ | Force quit the selected app |
+| ⌘P | Pin or unpin the selected app |
+| Esc | Clear the search, then close |
+| ⌘, | Open Settings |
+
+**Right-click an app** to restart it, force quit it, pin it, auto-restart it when frozen, exclude it, or show it in Finder.
+
+**Right-click the menu bar icon** for Settings, updates, feedback and Quit.
+
+## Settings
+
+![Settings](screenshots/settings-window.png)
+
+| Tab | What you can change |
+|---|---|
+| General | Appearance, launch at login, ask before each action, RAM and CPU display, notifications, and the panel shortcut. Also which groups to show, the RAM and CPU limits for macOS apps, and whether RestinPID restarts itself. |
+| Excluded | Apps that never appear in the list. |
+| Auto-Restart | Apps that restart by themselves when frozen, and how long to wait first. |
+| History | Every restart and force quit. |
+| Updates | How often to check (every day, week, two weeks, month, or never), and whether to install updates automatically. |
+
+## Updates
+
+RestinPID checks for new versions on the schedule you set in **Settings → Updates**. When one is ready:
+
+- a dot appears on the menu bar icon,
+- a banner appears at the top of the panel,
+- and you get a notification.
+
+Click any of them to see what's new and install it. To check right away, choose **Check for Updates…** from the gear menu.
+
+## Privacy
+
+Everything RestinPID measures stays on your Mac. It only goes online to check for updates. Feedback opens a page in your browser, and nothing is sent until you submit it there.
 
 ## Feedback
 
-Use **Send Feedback…** in the gear menu, or open an [issue](https://github.com/prabeshbhetwal/RestinPID/issues/new/choose).
+Found a problem or have an idea? Choose **Send Feedback…** from the gear menu, or [open an issue](https://github.com/prabeshbhetwal/RestinPID/issues/new/choose).
 
-## Build
+![Send Feedback](screenshots/feedback.png)
 
-```sh
-./build.sh                       # builds RestinPID.app here
-OUT=/Applications ./build.sh     # builds straight into Applications
-selftest/run.sh                  # logic self-test against a throwaway app
-```
+## Coming from AppRestarter?
 
-## Release
+RestinPID is the new name for AppRestarter. To switch:
 
-1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist`.
-2. Write `release-notes/RestinPID-<version>.html` (what’s new; shown in the update window).
-3. Run `./release.sh`. It writes `releases/RestinPID-<version>.zip` and updates `appcast.xml`.
-4. Create GitHub release `v<version>` with the zip attached, then commit and push `appcast.xml`.
+1. Install RestinPID as above.
+2. Quit AppRestarter and delete it.
+3. Allow Accessibility access once more, for RestinPID.
+
+Your settings and history carry over automatically.

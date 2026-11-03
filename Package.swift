@@ -13,7 +13,7 @@ let package = Package(
             dependencies: [.product(name: "Sparkle", package: "Sparkle")],
             path: ".",
             exclude: ["RestinPID.app", "_trash", "releases", ".github", "AppIcon.icns", "Info.plist", "make-icon.swift",
-                      "build.sh", "release.sh", "release-notes", "appcast.xml", "selftest", "README.md", "screenshots"],
+                      "build.sh", "release.sh", "release-notes", "appcast.xml", "selftest", "README.md", "DEVELOPING.md", "screenshots"],
             sources: ["RestinPID.swift", "Model.swift", "Views.swift", "Hotkey.swift"],
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),
