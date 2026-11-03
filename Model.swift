@@ -26,6 +26,11 @@ enum UsageScope: String, CaseIterable {
     case off, listed, system
 }
 
+/// How the RAM and CPU limits combine into "busy".
+enum BusyMatch: String, CaseIterable {
+    case either, both // either limit passed / both passed at once
+}
+
 /// When apps that ship with macOS appear in the list.
 enum SystemAppsMode: String, CaseIterable {
     case never, whenBusy, always
@@ -83,6 +88,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var ownMemory: UInt64 = 0
     @Published private(set) var ownCPU: Double?
     @Published var selfHeal: Bool { didSet { defaults.set(selfHeal, forKey: "selfHeal") } }
+    @Published var busyMatch: BusyMatch { didSet { defaults.set(busyMatch.rawValue, forKey: "busyMatch") } }
+    /// Hide your own apps (Dock and background) unless they're busy, frozen or pinned.
+    @Published var hideQuietApps: Bool { didSet { defaults.set(hideQuietApps, forKey: "hideQuietApps") } }
     @Published var panelTotals: UsageScope { didSet { defaults.set(panelTotals.rawValue, forKey: "panelTotals") } }
     @Published var menuBarUsage: UsageScope { didSet { defaults.set(menuBarUsage.rawValue, forKey: "menuBarUsage") } }
     /// Whole Mac: memory used (app + wired + compressed, Activity Monitor's "Memory Used") and CPU load
@@ -138,6 +146,8 @@ final class AppModel: ObservableObject {
         showMemory = defaults.object(forKey: "showMemory") as? Bool ?? true
         appearance = AppearanceMode(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         selfHeal = defaults.object(forKey: "selfHeal") as? Bool ?? true
+        busyMatch = BusyMatch(rawValue: defaults.string(forKey: "busyMatch") ?? "") ?? .either
+        hideQuietApps = defaults.object(forKey: "hideQuietApps") as? Bool ?? false
         panelTotals = UsageScope(rawValue: defaults.string(forKey: "panelTotals") ?? "") ?? .listed
         menuBarUsage = UsageScope(rawValue: defaults.string(forKey: "menuBarUsage") ?? "") ?? .off
         showBackground = defaults.object(forKey: "showBackground") as? Bool ?? true
@@ -280,16 +290,27 @@ final class AppModel: ObservableObject {
 
     func isShown(_ item: AppItem) -> Bool {
         if pinned.contains(item.bundleID) { return true }
+        let active = item.frozen || wasBusyRecently(item)
         switch item.kind {
-        case .app: return true
-        case .background: return showBackground
+        case .app: return !hideQuietApps || active
+        case .background: return showBackground && (!hideQuietApps || active)
         case .system:
             switch systemApps {
             case .never: return false
             case .always: return true
-            case .whenBusy: return item.frozen || highUseAt[item.id].map { Date().timeIntervalSince($0) < 15 } == true
+            case .whenBusy: return active
             }
         }
+    }
+
+    /// Busy now or in the last 15 s, so rows don't flicker in and out around a limit.
+    private func wasBusyRecently(_ item: AppItem) -> Bool {
+        highUseAt[item.id].map { Date().timeIntervalSince($0) < 15 } == true
+    }
+
+    /// The RAM and CPU limits, combined with or / and.
+    func isBusy(_ item: AppItem) -> Bool {
+        busyMatch == .either ? isHighRAM(item) || isHighCPU(item) : isHighRAM(item) && isHighCPU(item)
     }
 
     /// The apps the list shows, ignoring the search.
@@ -379,7 +400,7 @@ final class AppModel: ObservableObject {
                         item.cpu = Double(used) / Double(now - last.at) * 100
                     }
                     self.lastCPU[item.id] = (s.usage.cpuNanos, now)
-                    if self.isHighRAM(item) || self.isHighCPU(item) { self.highUseAt[item.id] = Date() }
+                    if self.isBusy(item) { self.highUseAt[item.id] = Date() }
                     return item
                 }
                 self.lastCPU = self.lastCPU.filter { pids.contains($0.key) }

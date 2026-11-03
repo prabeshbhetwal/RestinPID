@@ -30,6 +30,7 @@ To restart RestinPID itself, click **⟳** next to the gear at the top of the pa
 
 - **Auto-restart frozen apps:** choose apps that restart by themselves when they stay frozen for a time you set.
 - **Restarts itself:** if RestinPID ever freezes or slows down, it restarts itself. You can turn this off.
+- **Hide quiet apps:** show only apps that are busy, meaning over your RAM limit **or** CPU limit, or over **both** at once. You choose which.
 - **Search and pins:** type to filter the list, and pin the apps you use most to the top. Pin a macOS app to always see it.
 - **Exclude list:** hide apps you never want to see or touch.
 - **History:** a log of every restart and force quit, automatic ones included.

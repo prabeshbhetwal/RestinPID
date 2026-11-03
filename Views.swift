@@ -131,7 +131,8 @@ struct PanelView: View {
             Image(systemName: model.query.isEmpty ? "checkmark.circle" : "magnifyingglass")
                 .font(.system(size: 28))
                 .foregroundStyle(.secondary)
-            Text(model.query.isEmpty ? "No apps running" : "No apps match “\(model.query)”")
+            Text(!model.query.isEmpty ? "No apps match “\(model.query)”"
+                 : model.hideQuietApps ? "Nothing is busy right now" : "No apps running")
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -395,6 +396,16 @@ struct ExcludedTab: View {
 struct GeneralTab: View {
     @ObservedObject var model: AppModel
 
+    private var busySentence: String {
+        let ram = "\(model.ramLimitGB.formatted(.number.precision(.fractionLength(0...2)))) GB of RAM"
+        let cpu = "\(Int(model.cpuLimit))% CPU"
+        return model.busyMatch == .either
+            ? "Busy means over \(ram) or over \(cpu), whichever comes first."
+            : "Busy means over \(ram) and over \(cpu), both at the same time."
+    }
+    private var ownCount: Int { model.all.filter { $0.kind != .system }.count }
+    private var shownCount: Int { model.listed.filter { $0.kind != .system }.count }
+
     var body: some View {
         Form {
             Section {
@@ -415,16 +426,40 @@ struct GeneralTab: View {
                     .foregroundStyle(.secondary)
             }
             Section {
+                Picker("An app is busy when", selection: $model.busyMatch) {
+                    Text("RAM or CPU is over").tag(BusyMatch.either)
+                    Text("RAM and CPU are both over").tag(BusyMatch.both)
+                }
+                .pickerStyle(.segmented)
+                LimitSlider(title: "RAM over", value: $model.ramLimitGB, range: 0.25...16, step: 0.25,
+                            low: "0.25 GB", high: "16 GB") { "\($0.formatted(.number.precision(.fractionLength(0...2)))) GB" }
+                LimitSlider(title: model.busyMatch == .either ? "or CPU over" : "and CPU over", value: $model.cpuLimit,
+                            range: 10...400, step: 10, low: "10%", high: "400%") { "\(Int($0))%" }
+            } header: {
+                Text("When is an app busy?")
+            } footer: {
+                Text(busySentence + " Any figure over its limit turns orange. CPU: 100% is one full core, as in Activity Monitor.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Section {
                 Toggle("Show menu bar and background apps", isOn: $model.showBackground)
+                Toggle("Hide my apps that aren’t busy", isOn: $model.hideQuietApps)
                 Picker("Show macOS apps", selection: $model.systemApps) {
                     Text("Never").tag(SystemAppsMode.never)
                     Text("When busy or not responding").tag(SystemAppsMode.whenBusy)
                     Text("Always").tag(SystemAppsMode.always)
                 }
-                LimitSlider(title: "Busy when RAM is over", value: $model.ramLimitGB, range: 0.25...16, step: 0.25,
-                            low: "0.25 GB", high: "16 GB") { "\($0.formatted(.number.precision(.fractionLength(0...2)))) GB" }
-                LimitSlider(title: "or CPU is over", value: $model.cpuLimit, range: 10...400, step: 10,
-                            low: "10%", high: "400%") { "\(Int($0))%" }
+            } header: {
+                Text("Apps in the list")
+            } footer: {
+                Text("Showing \(shownCount) of your \(ownCount) running apps right now. Pinned apps and apps that stop responding always show. Apps that came with macOS (Finder, Dock, Spotlight…) follow the setting above.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Section {
                 Picker("Totals in the panel", selection: $model.panelTotals) {
                     Text("Off").tag(UsageScope.off)
                     Text("Each group’s apps").tag(UsageScope.listed)
@@ -436,9 +471,9 @@ struct GeneralTab: View {
                     Text("Whole Mac").tag(UsageScope.system)
                 }
             } header: {
-                Text("Apps in the list")
+                Text("Usage totals")
             } footer: {
-                Text("Apps that came with macOS (Finder, Dock, Spotlight…) stay hidden until they pass a limit or stop responding. Pin one to always show it. Figures over a limit turn orange for every app. Whole Mac shows Memory Used and CPU load as Activity Monitor does; app totals count CPU per core, so they can pass 100%.")
+                Text("Whole Mac shows Memory Used and CPU load as Activity Monitor does (CPU out of all cores). App totals add up each app, so CPU can pass 100%.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

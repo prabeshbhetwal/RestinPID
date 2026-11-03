@@ -24,6 +24,19 @@ import AppKit
   // Exclude
   m.excluded.insert("com.test.ARDummy"); print("4 exclude hides:", te() == nil ? "PASS" : "FAIL")
   m.excluded.remove("com.test.ARDummy"); wait(0.5)
+  // Busy rule: RAM over a tiny limit, CPU under a huge one -> busy with "or", not with "and"
+  if let x = te() {
+    m.ramLimitGB = 0.0001; m.cpuLimit = 400
+    m.busyMatch = .either; let either = m.isBusy(x)
+    m.busyMatch = .both; let both = m.isBusy(x)
+    print("12 or / and:", either && !both ? "PASS" : "FAIL", "either=\(either) both=\(both)")
+    m.ramLimitGB = 16; m.busyMatch = .either; m.hideQuietApps = true
+    let hidden = te().map { !m.isShown($0) } ?? false
+    m.ramLimitGB = 0.0001; wait(4) // next poll marks it busy
+    let shown = te().map { m.isShown($0) } ?? false
+    print("13 hide quiet apps:", hidden && shown ? "PASS" : "FAIL", "quiet hidden=\(hidden), busy shown=\(shown)")
+    m.hideQuietApps = false; m.ramLimitGB = 1; m.cpuLimit = 50
+  }
   // Force quit only (no relaunch)
   if let c = te() { m.perform(.forceQuit, on: [c]); wait(3)
     print("5 force quit, no relaunch:", (te() == nil && !isAlive(c.id) && m.history.first?.action == "Force Quit") ? "PASS" : "FAIL") }
