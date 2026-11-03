@@ -72,9 +72,11 @@ Works on macOS 13 Ventura and later, on Apple silicon and Intel Macs.
 
 | Tab | What you can change |
 |---|---|
-| General | Appearance, launch at login, ask before each action, RAM and CPU display, notifications, and the panel shortcut. Also which groups to show, the RAM and CPU limits for macOS apps, and whether RestinPID restarts itself. |
+| General | Appearance, launch at login, the panel shortcut, whether to ask before each action, and notifications. |
+| Apps | Which apps the list shows: menu bar and background apps, only busy apps, and macOS apps. Also what "busy" means: RAM **or** CPU over your limits, or **both** at once. |
+| Usage | RAM and CPU on each app, totals in the panel (per group or the whole Mac), and an optional reading next to the menu bar icon. |
+| Auto-Restart | Apps that restart by themselves when frozen, how long to wait first, and whether RestinPID restarts itself if it gets stuck. |
 | Excluded | Apps that never appear in the list. |
-| Auto-Restart | Apps that restart by themselves when frozen, and how long to wait first. |
 | History | Every restart and force quit. |
 | Updates | How often to check (every day, week, two weeks, month, or never), and whether to install updates automatically. |
 

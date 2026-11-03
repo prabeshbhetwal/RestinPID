@@ -268,7 +268,7 @@ private struct AppRow: View {
         }
         .font(.caption)
         .monospacedDigit()
-        .help("RAM: memory used by the app and its helper processes.\nCPU: processor use, where 100% is one full core (same as Activity Monitor).\nOrange: above the high-use limit in Settings → General.")
+        .help("RAM: memory used by the app and its helper processes.\nCPU: processor use, where 100% is one full core (same as Activity Monitor).\nOrange: over its busy limit (Settings → Apps).")
     }
 
     private var accessibilityText: String {
@@ -363,7 +363,7 @@ struct HoverPillStyle: ButtonStyle {
 /// Native preferences window: toolbar tabs with icons, window title follows the tab.
 func makeSettingsController(model: AppModel, updater: SPUUpdater) -> NSTabViewController {
     func tab<V: View>(_ title: String, _ symbol: String, _ view: V) -> NSTabViewItem {
-        let hosting = NSHostingController(rootView: view.padding(20).frame(width: 540, height: 420))
+        let hosting = NSHostingController(rootView: view.padding(20).frame(width: 600, height: 460))
         hosting.sizingOptions = .preferredContentSize
         hosting.title = title
         let item = NSTabViewItem(viewController: hosting)
@@ -375,8 +375,10 @@ func makeSettingsController(model: AppModel, updater: SPUUpdater) -> NSTabViewCo
     controller.tabStyle = .toolbar
     controller.tabViewItems = [
         tab("General", "gearshape", GeneralTab(model: model)),
-        tab("Excluded", "eye.slash", ExcludedTab(model: model)),
+        tab("Apps", "square.grid.2x2", AppsTab(model: model)),
+        tab("Usage", "gauge.with.dots.needle.33percent", UsageTab(model: model)),
         tab("Auto-Restart", "bolt.heart", AutoRestartTab(model: model)),
+        tab("Excluded", "eye.slash", ExcludedTab(model: model)),
         tab("History", "clock.arrow.circlepath", HistoryTab(model: model)),
         tab("Updates", "arrow.down.circle", UpdatesTab(updater: updater)),
     ]
@@ -393,7 +395,47 @@ struct ExcludedTab: View {
     }
 }
 
+/// Look, startup, shortcut, confirmations and notifications.
 struct GeneralTab: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Appearance", selection: $model.appearance) {
+                    Text("System").tag(AppearanceMode.system)
+                    Text("Light").tag(AppearanceMode.light)
+                    Text("Dark").tag(AppearanceMode.dark)
+                }
+                .pickerStyle(.segmented)
+                Toggle("Launch RestinPID at login", isOn: $model.launchAtLogin)
+                LabeledContent("Open panel shortcut") { HotkeyRecorder(combo: $model.hotkey) }
+            }
+            Section {
+                Toggle("Ask before restarting or force quitting an app", isOn: $model.confirmActions)
+                Toggle("Notify after each restart or force quit", isOn: $model.notify)
+            } header: {
+                Text("Actions")
+            } footer: {
+                Text("Restart All, Force Quit All and actions on macOS apps always ask first.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Keyboard (in the panel)") {
+                ShortcutRow(keys: "↑ ↓", action: "Move selection")
+                ShortcutRow(keys: "↩", action: "Restart selected app")
+                ShortcutRow(keys: "⌘↩  or  ⌘⌫", action: "Force quit selected app")
+                ShortcutRow(keys: "⌘P", action: "Pin or unpin selected app")
+                ShortcutRow(keys: "Esc", action: "Clear search, then close")
+                ShortcutRow(keys: "⌘,", action: "Settings")
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// Which apps the panel lists, and what "busy" means (it decides the hiding).
+struct AppsTab: View {
     @ObservedObject var model: AppModel
 
     private var busySentence: String {
@@ -409,21 +451,20 @@ struct GeneralTab: View {
     var body: some View {
         Form {
             Section {
-                Picker("Appearance", selection: $model.appearance) {
-                    Text("System").tag(AppearanceMode.system)
-                    Text("Light").tag(AppearanceMode.light)
-                    Text("Dark").tag(AppearanceMode.dark)
+                Toggle("Show menu bar and background apps", isOn: $model.showBackground)
+                Toggle("Hide my apps that aren’t busy", isOn: $model.hideQuietApps)
+                Picker("Show macOS apps", selection: $model.systemApps) {
+                    Text("Never").tag(SystemAppsMode.never)
+                    Text("When busy or not responding").tag(SystemAppsMode.whenBusy)
+                    Text("Always").tag(SystemAppsMode.always)
                 }
-                .pickerStyle(.segmented)
-                Toggle("Launch RestinPID at login", isOn: $model.launchAtLogin)
-                Toggle("Ask before restarting or force quitting an app", isOn: $model.confirmActions)
-                Toggle("Show RAM and CPU use", isOn: $model.showMemory)
-                Toggle("Notify after each restart or force quit", isOn: $model.notify)
-                LabeledContent("Open panel shortcut") { HotkeyRecorder(combo: $model.hotkey) }
+            } header: {
+                Text("Apps in the list")
             } footer: {
-                Text("Restart All, Force Quit All and actions on macOS apps always ask first.")
+                Text("Showing \(shownCount) of your \(ownCount) running apps right now. Pinned apps and apps that stop responding always show. macOS apps are the ones that came with your Mac (Finder, Dock, Spotlight…).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Section {
                 Picker("An app is busy when", selection: $model.busyMatch) {
@@ -443,58 +484,35 @@ struct GeneralTab: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// How RAM and CPU figures are shown: per row, per group or whole Mac, and in the menu bar.
+struct UsageTab: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        Form {
             Section {
-                Toggle("Show menu bar and background apps", isOn: $model.showBackground)
-                Toggle("Hide my apps that aren’t busy", isOn: $model.hideQuietApps)
-                Picker("Show macOS apps", selection: $model.systemApps) {
-                    Text("Never").tag(SystemAppsMode.never)
-                    Text("When busy or not responding").tag(SystemAppsMode.whenBusy)
-                    Text("Always").tag(SystemAppsMode.always)
-                }
-            } header: {
-                Text("Apps in the list")
-            } footer: {
-                Text("Showing \(shownCount) of your \(ownCount) running apps right now. Pinned apps and apps that stop responding always show. Apps that came with macOS (Finder, Dock, Spotlight…) follow the setting above.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Section {
+                Toggle("Show RAM and CPU for each app", isOn: $model.showMemory)
                 Picker("Totals in the panel", selection: $model.panelTotals) {
                     Text("Off").tag(UsageScope.off)
                     Text("Each group’s apps").tag(UsageScope.listed)
                     Text("Whole Mac").tag(UsageScope.system)
                 }
+                .disabled(!model.showMemory)
                 Picker("Next to the menu bar icon", selection: $model.menuBarUsage) {
                     Text("Off").tag(UsageScope.off)
                     Text("Apps in the list").tag(UsageScope.listed)
                     Text("Whole Mac").tag(UsageScope.system)
                 }
-            } header: {
-                Text("Usage totals")
             } footer: {
-                Text("Whole Mac shows Memory Used and CPU load as Activity Monitor does (CPU out of all cores). App totals add up each app, so CPU can pass 100%.")
+                Text("Whole Mac shows Memory Used and CPU load as Activity Monitor does (CPU out of all cores). App figures add up each app and its helpers, where 100% CPU is one full core, so totals can pass 100%. Figures over the busy limits (Apps tab) turn orange.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-            }
-            Section {
-                Toggle("Restart RestinPID if it freezes or slows down", isOn: $model.selfHeal)
-            } header: {
-                Text("RestinPID itself")
-            } footer: {
-                Text("A separate watcher restarts it if it stops responding for \(Int(model.selfLimits.freeze)) seconds, uses over \(formatBytes(model.selfLimits.ram)) of RAM, or stays above \(Int(model.selfLimits.cpu))% CPU for a minute. At most once every 10 minutes. To restart it yourself, click ⟳ next to the gear in the panel.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Section("Keyboard (in the panel)") {
-                ShortcutRow(keys: "↑ ↓", action: "Move selection")
-                ShortcutRow(keys: "↩", action: "Restart selected app")
-                ShortcutRow(keys: "⌘↩  or  ⌘⌫", action: "Force quit selected app")
-                ShortcutRow(keys: "⌘P", action: "Pin or unpin selected app")
-                ShortcutRow(keys: "Esc", action: "Clear search, then close")
-                ShortcutRow(keys: "⌘,", action: "Settings")
             }
         }
         .formStyle(.grouped)
@@ -611,6 +629,14 @@ struct AutoRestartTab: View {
                 model: model, apps: $model.watched,
                 caption: "These apps restart automatically when they stop responding."
             )
+            Divider()
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Restart RestinPID itself if it freezes or slows down", isOn: $model.selfHeal)
+                Text("A separate watcher restarts it if it stops responding for \(Int(model.selfLimits.freeze)) seconds, uses over \(formatBytes(model.selfLimits.ram)) of RAM, or stays above \(Int(model.selfLimits.cpu))% CPU for a minute. At most once every 10 minutes. To restart it yourself, use the restart button next to the gear in the panel.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }
