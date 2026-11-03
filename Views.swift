@@ -20,8 +20,6 @@ struct PanelView: View {
             if let version = model.availableUpdate { updateBanner(version) }
             if items.isEmpty { emptyState } else { list(items) }
             Divider()
-            selfStrip
-            Divider()
             footer(items)
         }
         .frame(width: 360)
@@ -41,6 +39,10 @@ struct PanelView: View {
                     .help("Clear search")
                     .accessibilityLabel("Clear search")
             }
+            Button { model.restartSelf() } label: { Image(systemName: "arrow.clockwise.circle") }
+                .buttonStyle(HoverIconStyle(tint: .accentColor))
+                .help("Restart RestinPID: quits this app and opens it again")
+                .accessibilityLabel("Restart RestinPID")
             Menu {
                 Button("Settings…", action: openSettings).keyboardShortcut(",")
                 Button(model.availableUpdate.map { "Update to \($0)…" } ?? "Check for Updates…", action: checkForUpdates)
@@ -92,49 +94,36 @@ struct PanelView: View {
             ("Menu Bar & Background", others.filter { $0.kind == .background }),
             (model.systemApps == .whenBusy ? "macOS · Busy or Not Responding" : "macOS", others.filter { $0.kind == .system }),
         ].filter { !$0.1.isEmpty }
+        let showTotals = model.showMemory && model.panelTotals == .listed
+        let showMac = model.showMemory && model.panelTotals == .system
         return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
+                    if showMac {
+                        SectionHeader(title: "This Mac", trailing: macUsage)
+                            .help("Whole Mac, as in Activity Monitor: Memory Used (of installed RAM), and CPU load across all cores.")
+                    }
                     ForEach(groups, id: \.0) { title, rows in
-                        SectionHeader(title: title)
+                        SectionHeader(title: title, trailing: showTotals ? usageText(model.totals(rows)) : nil)
+                            .help(showTotals ? "Total for the apps in this group. CPU: 100% is one full core, as in each row." : "")
                         ForEach(rows) { AppRow(model: model, item: $0) }
                     }
                 }
                 .padding(6)
             }
-            .frame(height: min(CGFloat(items.count) * 46 + CGFloat(groups.count) * 30, 520))
+            .frame(height: min(CGFloat(items.count) * 46 + CGFloat(groups.count + (showMac ? 1 : 0)) * 30, 520))
             .onChange(of: model.selection) { id in
                 if let id { proxy.scrollTo(id) }
             }
         }
     }
 
-    /// RestinPID itself: kept out of the list, search and bulk actions.
-    private var selfStrip: some View {
-        HStack(spacing: 8) {
-            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 18, height: 18)
-            Text("RestinPID").font(.callout)
-            if model.showMemory, model.ownMemory > 0 {
-                HStack(spacing: 6) {
-                    Text("RAM \(formatBytes(model.ownMemory))")
-                    if let cpu = model.ownCPU {
-                        Text("·").foregroundStyle(.tertiary)
-                        Text("CPU \(formatCPU(cpu))")
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-            }
-            Spacer()
-            RowButton(symbol: "arrow.clockwise", label: "Restart RestinPID", tint: .accentColor) { model.restartSelf() }
-            RowButton(symbol: "xmark.octagon", label: "Force Quit RestinPID", tint: .red) { model.forceQuitSelf() }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 4)
-        .help(model.selfHeal ? "This app. It restarts itself if it freezes or slows down (Settings → General)." : "This app.")
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("RestinPID, this app")
+    private func usageText(_ t: (memory: UInt64, cpu: Double?)) -> String {
+        "RAM \(formatBytes(t.memory))" + (t.cpu.map { " · CPU \(formatCPU($0))" } ?? "")
+    }
+
+    private var macUsage: String {
+        "RAM \(formatBytes(model.macMemory)) of \(formatBytes(model.macMemoryTotal))" + (model.macCPU.map { " · CPU \(formatCPU($0))" } ?? "")
     }
 
     private var emptyState: some View {
@@ -172,9 +161,13 @@ struct PanelView: View {
 
 private struct SectionHeader: View {
     let title: String
+    var trailing: String? = nil
     var body: some View {
-        Text(title)
-            .font(.caption.weight(.semibold))
+        HStack {
+            Text(title).font(.caption.weight(.semibold))
+            Spacer()
+            if let trailing { Text(trailing).font(.caption).monospacedDigit() }
+        }
             .foregroundStyle(.secondary)
             .padding(.horizontal, 8)
             .padding(.top, 6)
@@ -432,10 +425,20 @@ struct GeneralTab: View {
                             low: "0.25 GB", high: "16 GB") { "\($0.formatted(.number.precision(.fractionLength(0...2)))) GB" }
                 LimitSlider(title: "or CPU is over", value: $model.cpuLimit, range: 10...400, step: 10,
                             low: "10%", high: "400%") { "\(Int($0))%" }
+                Picker("Totals in the panel", selection: $model.panelTotals) {
+                    Text("Off").tag(UsageScope.off)
+                    Text("Each group’s apps").tag(UsageScope.listed)
+                    Text("Whole Mac").tag(UsageScope.system)
+                }
+                Picker("Next to the menu bar icon", selection: $model.menuBarUsage) {
+                    Text("Off").tag(UsageScope.off)
+                    Text("Apps in the list").tag(UsageScope.listed)
+                    Text("Whole Mac").tag(UsageScope.system)
+                }
             } header: {
                 Text("Apps in the list")
             } footer: {
-                Text("Apps that came with macOS (Finder, Dock, Spotlight…) stay hidden until they pass a limit or stop responding. Pin one to always show it. Figures over a limit turn orange for every app.")
+                Text("Apps that came with macOS (Finder, Dock, Spotlight…) stay hidden until they pass a limit or stop responding. Pin one to always show it. Figures over a limit turn orange for every app. Whole Mac shows Memory Used and CPU load as Activity Monitor does; app totals count CPU per core, so they can pass 100%.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -445,7 +448,7 @@ struct GeneralTab: View {
             } header: {
                 Text("RestinPID itself")
             } footer: {
-                Text("A separate watcher restarts it if it stops responding for \(Int(model.selfLimits.freeze)) seconds, uses over \(formatBytes(model.selfLimits.ram)) of RAM, or stays above \(Int(model.selfLimits.cpu))% CPU for a minute. At most once every 10 minutes. Its own RAM and CPU show at the bottom of the panel.")
+                Text("A separate watcher restarts it if it stops responding for \(Int(model.selfLimits.freeze)) seconds, uses over \(formatBytes(model.selfLimits.ram)) of RAM, or stays above \(Int(model.selfLimits.cpu))% CPU for a minute. At most once every 10 minutes. To restart it yourself, click ⟳ next to the gear in the panel.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

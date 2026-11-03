@@ -29,7 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().delegate = self
         _ = updater // start Sparkle's schedule
 
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.button?.imagePosition = .imageLeft
         statusItem.button?.target = self
         statusItem.button?.action = #selector(statusItemClicked(_:))
         statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -69,6 +70,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             }
             .store(in: &subscriptions)
 
+        // Optional RAM · CPU reading next to the icon; refreshed with each poll.
+        model.$all.map { _ in () }
+            .merge(with: model.$macMemory.map { _ in () }, model.$menuBarUsage.map { _ in () })
+            .receive(on: DispatchQueue.main) // read the model after the change lands
+            .sink { [weak self] in self?.updateStatusReading() }
+            .store(in: &subscriptions)
+
         model.$appearance
             .sink { [weak self] mode in
                 NSApp.appearance = mode.nsAppearance
@@ -87,6 +95,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     // MARK: Status item + popover
+
+    private func updateStatusReading() {
+        guard let button = statusItem.button else { return }
+        let reading: (memory: UInt64, cpu: Double?)?
+        switch model.menuBarUsage {
+        case .off: reading = nil
+        case .listed: reading = model.totals(model.listed)
+        case .system: reading = (model.macMemory, model.macCPU)
+        }
+        guard let reading, reading.memory > 0 else {
+            button.attributedTitle = NSAttributedString()
+            button.toolTip = nil
+            return
+        }
+        let text = " " + formatBytes(reading.memory) + (reading.cpu.map { "  " + formatCPU($0) } ?? "")
+        button.attributedTitle = NSAttributedString(string: text, attributes: [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular),
+        ])
+        button.toolTip = model.menuBarUsage == .system
+            ? "Whole Mac: memory used and CPU load"
+            : "Apps in the list: total RAM and CPU (100% = one core)"
+    }
 
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
         if NSApp.currentEvent?.type == .rightMouseUp {

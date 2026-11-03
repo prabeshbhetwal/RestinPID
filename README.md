@@ -24,7 +24,7 @@ Click an app to restart it, or use its two buttons:
 
 **Restart All** and **Force Quit All** act on every app in the list at once, except macOS apps. They always ask first.
 
-RestinPID's own RAM and CPU show at the bottom of the panel, with its own Restart and Force Quit buttons.
+To restart RestinPID itself, click **⟳** next to the gear at the top of the panel.
 
 ## Features
 

@@ -33,6 +33,11 @@ import AppKit
   let grouped = !paths.contains { $0.dropLast(4).contains(".app/") } && !m.all.contains { $0.bundleID == "com.apple.loginwindow" } && finder?.kind == .system
   print("6 grouping:", grouped ? "PASS" : "FAIL", "apps \(m.all.filter { $0.kind == .app }.count), background \(m.all.filter { $0.kind == .background }.count), macOS \(m.all.filter { $0.kind == .system }.count) (\(m.visible.filter { $0.kind == .system }.count) shown)")
   print("  background:", m.all.filter { $0.kind == .background }.map(\.name).sorted().joined(separator: ", "))
+  // Totals: whole Mac within physical RAM and 0–100% CPU; group totals add up
+  let t = m.totals(m.listed)
+  let macOK = m.macMemory > 0 && m.macMemory <= m.macMemoryTotal && (m.macCPU.map { (0...100).contains($0) } ?? false)
+  print("11 totals:", macOK && t.memory == m.listed.reduce(0) { $0 + $1.memory } ? "PASS" : "FAIL",
+        "Mac \(formatBytes(m.macMemory)) of \(formatBytes(m.macMemoryTotal)), CPU \(m.macCPU.map(formatCPU) ?? "-"); listed \(formatBytes(t.memory))")
   // Self-watch: own usage shows; a stuck main thread and RAM over the limit both trigger a self-restart
   print("7 own usage:", m.ownMemory > 0 && m.ownCPU != nil ? "PASS" : "FAIL", formatBytes(m.ownMemory), m.ownCPU.map(formatCPU) ?? "-")
   m.selfLimits.warmup = 0; m.selfLimits.freeze = 3; m.selfLimits.cooldown = 0

@@ -21,6 +21,11 @@ enum AppearanceMode: String, CaseIterable {
     }
 }
 
+/// Where usage totals come from: off, the apps in the list, or the whole Mac (like Activity Monitor).
+enum UsageScope: String, CaseIterable {
+    case off, listed, system
+}
+
 /// When apps that ship with macOS appear in the list.
 enum SystemAppsMode: String, CaseIterable {
     case never, whenBusy, always
@@ -74,10 +79,18 @@ final class AppModel: ObservableObject {
     @Published var appearance: AppearanceMode { didSet { defaults.set(appearance.rawValue, forKey: "appearance") } }
     /// Version found by a background update check, shown as a badge until the user looks at it.
     @Published var availableUpdate: String?
-    /// RestinPID's own use, shown in its own strip (never in the list). Updated by the self-watch.
+    /// RestinPID's own use, measured by the self-watch (the self-test reads it).
     @Published private(set) var ownMemory: UInt64 = 0
     @Published private(set) var ownCPU: Double?
     @Published var selfHeal: Bool { didSet { defaults.set(selfHeal, forKey: "selfHeal") } }
+    @Published var panelTotals: UsageScope { didSet { defaults.set(panelTotals.rawValue, forKey: "panelTotals") } }
+    @Published var menuBarUsage: UsageScope { didSet { defaults.set(menuBarUsage.rawValue, forKey: "menuBarUsage") } }
+    /// Whole Mac: memory used (app + wired + compressed, Activity Monitor's "Memory Used") and CPU load
+    /// as a share of all cores (0–100%).
+    @Published private(set) var macMemory: UInt64 = 0
+    @Published private(set) var macCPU: Double?
+    let macMemoryTotal = ProcessInfo.processInfo.physicalMemory
+    private var lastMacTicks: (busy: UInt64, total: UInt64)?
     @Published var showBackground: Bool { didSet { defaults.set(showBackground, forKey: "showBackground") } }
     @Published var systemApps: SystemAppsMode { didSet { defaults.set(systemApps.rawValue, forKey: "systemApps") } }
     /// "High use" limits: macOS apps show above them; everyone's figures turn orange.
@@ -125,6 +138,8 @@ final class AppModel: ObservableObject {
         showMemory = defaults.object(forKey: "showMemory") as? Bool ?? true
         appearance = AppearanceMode(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         selfHeal = defaults.object(forKey: "selfHeal") as? Bool ?? true
+        panelTotals = UsageScope(rawValue: defaults.string(forKey: "panelTotals") ?? "") ?? .listed
+        menuBarUsage = UsageScope(rawValue: defaults.string(forKey: "menuBarUsage") ?? "") ?? .off
         showBackground = defaults.object(forKey: "showBackground") as? Bool ?? true
         systemApps = SystemAppsMode(rawValue: defaults.string(forKey: "systemApps") ?? "") ?? .whenBusy
         ramLimitGB = defaults.object(forKey: "ramLimitGB") as? Double ?? 1
@@ -244,12 +259,6 @@ final class AppModel: ObservableObject {
         relaunchSelf()
     }
 
-    /// Immediate, like Force Quit on any other app; works even if the app is misbehaving.
-    func forceQuitSelf() {
-        record(.forceQuit, name: "RestinPID", ok: true, automatic: false, notifyUser: false)
-        kill(getpid(), SIGKILL)
-    }
-
     func prepareForDisplay() {
         query = ""
         selection = visible.first?.id
@@ -281,6 +290,15 @@ final class AppModel: ObservableObject {
             case .whenBusy: return item.frozen || highUseAt[item.id].map { Date().timeIntervalSince($0) < 15 } == true
             }
         }
+    }
+
+    /// The apps the list shows, ignoring the search.
+    var listed: [AppItem] { all.filter(isShown) }
+
+    /// Summed RAM and CPU (% of one core, like each row) for some apps.
+    func totals(_ items: [AppItem]) -> (memory: UInt64, cpu: Double?) {
+        let cpus = items.compactMap(\.cpu)
+        return (items.reduce(0) { $0 + $1.memory }, cpus.isEmpty ? nil : cpus.reduce(0, +))
     }
 
     func isHighRAM(_ item: AppItem) -> Bool { Double(item.memory) >= ramLimitGB * 1_073_741_824 }
@@ -336,9 +354,15 @@ final class AppModel: ObservableObject {
                 (pid, (usage: treeUsage(pid, bundlePath: bundle), ping: trusted && !silent.contains(pid) ? axPing(pid) : nil))
             })
             let now = monotonicNanos()
+            let macMemory = systemMemoryUsed(), macTicks = systemCPUTicks()
             DispatchQueue.main.async {
                 self.polling = false
                 self.accessibilityTrusted = trusted
+                self.macMemory = macMemory
+                if let last = self.lastMacTicks, macTicks.total > last.total {
+                    self.macCPU = Double(macTicks.busy - last.busy) / Double(macTicks.total - last.total) * 100
+                }
+                self.lastMacTicks = macTicks
                 self.all = self.all.map { item in
                     var item = item
                     guard let s = status[item.id] else { return item }
@@ -618,6 +642,31 @@ private let timebase: mach_timebase_info_data_t = {
 
 func monotonicNanos() -> UInt64 {
     clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+}
+
+/// Activity Monitor's "Memory Used": app memory + wired + compressed.
+func systemMemoryUsed() -> UInt64 {
+    var stats = vm_statistics64()
+    var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.stride / MemoryLayout<integer_t>.stride)
+    let ok = withUnsafeMutablePointer(to: &stats) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count) }
+    } == KERN_SUCCESS
+    guard ok else { return 0 }
+    let app = UInt64(stats.internal_page_count) - min(UInt64(stats.purgeable_count), UInt64(stats.internal_page_count))
+    return (app + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)) * UInt64(vm_kernel_page_size)
+}
+
+/// Cumulative CPU ticks across all cores; busy = user + system + nice.
+func systemCPUTicks() -> (busy: UInt64, total: UInt64) {
+    var info = host_cpu_load_info()
+    var count = mach_msg_type_number_t(MemoryLayout<host_cpu_load_info>.stride / MemoryLayout<integer_t>.stride)
+    let ok = withUnsafeMutablePointer(to: &info) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, $0, &count) }
+    } == KERN_SUCCESS
+    guard ok else { return (0, 0) }
+    let t = info.cpu_ticks // user, system, idle, nice
+    let busy = UInt64(t.0) + UInt64(t.1) + UInt64(t.3)
+    return (busy, busy + UInt64(t.2))
 }
 
 func formatBytes(_ bytes: UInt64) -> String {
