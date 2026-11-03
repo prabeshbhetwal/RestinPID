@@ -4,7 +4,11 @@ import AppKit
   let d = UserDefaults.standard
   d.set(false, forKey: "notify"); d.set(false, forKey: "confirmActions"); d.set(5.0, forKey: "frozenThreshold")
   d.removeObject(forKey: "excluded"); d.removeObject(forKey: "history"); d.set(["com.test.ARDummy"], forKey: "watched")
-  let m = AppModel.shared; m.start()
+  d.set(true, forKey: "selfHeal"); d.removeObject(forKey: "selfRestartedAt"); d.removeObject(forKey: "selfRestartReason")
+  let m = AppModel.shared
+  var selfReasons: [String] = []
+  m.selfRestartAction = { reason in DispatchQueue.main.async { selfReasons.append(reason) } } // never really relaunch the test
+  m.start()
   func wait(_ s: Double) { RunLoop.main.run(until: Date().addingTimeInterval(s)) }
   func te() -> AppItem? { m.all.first { $0.bundleID == "com.test.ARDummy" } }
   NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: "\(CommandLine.arguments[1])"), configuration: .init()) { _, _ in }
@@ -29,5 +33,19 @@ import AppKit
   let grouped = !paths.contains { $0.dropLast(4).contains(".app/") } && !m.all.contains { $0.bundleID == "com.apple.loginwindow" } && finder?.kind == .system
   print("6 grouping:", grouped ? "PASS" : "FAIL", "apps \(m.all.filter { $0.kind == .app }.count), background \(m.all.filter { $0.kind == .background }.count), macOS \(m.all.filter { $0.kind == .system }.count) (\(m.visible.filter { $0.kind == .system }.count) shown)")
   print("  background:", m.all.filter { $0.kind == .background }.map(\.name).sorted().joined(separator: ", "))
+  // Self-watch: own usage shows; a stuck main thread and RAM over the limit both trigger a self-restart
+  print("7 own usage:", m.ownMemory > 0 && m.ownCPU != nil ? "PASS" : "FAIL", formatBytes(m.ownMemory), m.ownCPU.map(formatCPU) ?? "-")
+  m.selfLimits.warmup = 0; m.selfLimits.freeze = 3; m.selfLimits.cooldown = 0
+  Thread.sleep(forTimeInterval: 6) // main thread stuck
+  wait(1)
+  print("8 self-restart when frozen:", selfReasons.contains { $0.contains("stopped responding") } ? "PASS" : "FAIL", selfReasons)
+  selfReasons = []; m.selfLimits.ram = 1
+  wait(5)
+  print("9 self-restart over RAM limit:", selfReasons.contains { $0.contains("RAM") } ? "PASS" : "FAIL", selfReasons.first ?? "")
+  selfReasons = []; m.selfLimits.ram = UInt64(500) << 20; d.set(false, forKey: "selfHeal")
+  wait(5)
+  m.selfLimits.ram = 1; wait(5)
+  print("10 setting off = no self-restart:", selfReasons.isEmpty ? "PASS" : "FAIL")
+  d.removeObject(forKey: "selfRestartedAt")
   d.removeObject(forKey: "watched")
 }}

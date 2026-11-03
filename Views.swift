@@ -20,6 +20,8 @@ struct PanelView: View {
             if let version = model.availableUpdate { updateBanner(version) }
             if items.isEmpty { emptyState } else { list(items) }
             Divider()
+            selfStrip
+            Divider()
             footer(items)
         }
         .frame(width: 360)
@@ -105,6 +107,34 @@ struct PanelView: View {
                 if let id { proxy.scrollTo(id) }
             }
         }
+    }
+
+    /// RestinPID itself: kept out of the list, search and bulk actions.
+    private var selfStrip: some View {
+        HStack(spacing: 8) {
+            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 18, height: 18)
+            Text("RestinPID").font(.callout)
+            if model.showMemory, model.ownMemory > 0 {
+                HStack(spacing: 6) {
+                    Text("RAM \(formatBytes(model.ownMemory))")
+                    if let cpu = model.ownCPU {
+                        Text("·").foregroundStyle(.tertiary)
+                        Text("CPU \(formatCPU(cpu))")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            }
+            Spacer()
+            RowButton(symbol: "arrow.clockwise", label: "Restart RestinPID", tint: .accentColor) { model.restartSelf() }
+            RowButton(symbol: "xmark.octagon", label: "Force Quit RestinPID", tint: .red) { model.forceQuitSelf() }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .help(model.selfHeal ? "This app. It restarts itself if it freezes or slows down (Settings → General)." : "This app.")
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("RestinPID, this app")
     }
 
     private var emptyState: some View {
@@ -408,6 +438,16 @@ struct GeneralTab: View {
                 Text("Apps in the list")
             } footer: {
                 Text("Apps that came with macOS (Finder, Dock, Spotlight…) stay hidden until they pass a limit or stop responding. Pin one to always show it. Figures over a limit turn orange for every app.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Section {
+                Toggle("Restart RestinPID if it freezes or slows down", isOn: $model.selfHeal)
+            } header: {
+                Text("RestinPID itself")
+            } footer: {
+                Text("A separate watcher restarts it if it stops responding for \(Int(model.selfLimits.freeze)) seconds, uses over \(formatBytes(model.selfLimits.ram)) of RAM, or stays above \(Int(model.selfLimits.cpu))% CPU for a minute. At most once every 10 minutes. Its own RAM and CPU show at the bottom of the panel.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -763,7 +803,7 @@ struct FeedbackView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .formStyle(.grouped)
-        .frame(width: 480)
+        .frame(width: 480, height: 460) // a grouped Form scrolls and has no height of its own
     }
 
     private var systemInfo: String {

@@ -129,7 +129,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     @objc func showFeedback() {
         popover.performClose(nil)
         if feedbackWindow == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: FeedbackView()))
+            let hosting = NSHostingController(rootView: FeedbackView())
+            hosting.sizingOptions = .preferredContentSize
+            let window = NSWindow(contentViewController: hosting)
             window.title = "Send Feedback"
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false

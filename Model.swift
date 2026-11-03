@@ -74,6 +74,10 @@ final class AppModel: ObservableObject {
     @Published var appearance: AppearanceMode { didSet { defaults.set(appearance.rawValue, forKey: "appearance") } }
     /// Version found by a background update check, shown as a badge until the user looks at it.
     @Published var availableUpdate: String?
+    /// RestinPID's own use, shown in its own strip (never in the list). Updated by the self-watch.
+    @Published private(set) var ownMemory: UInt64 = 0
+    @Published private(set) var ownCPU: Double?
+    @Published var selfHeal: Bool { didSet { defaults.set(selfHeal, forKey: "selfHeal") } }
     @Published var showBackground: Bool { didSet { defaults.set(showBackground, forKey: "showBackground") } }
     @Published var systemApps: SystemAppsMode { didSet { defaults.set(systemApps.rawValue, forKey: "systemApps") } }
     /// "High use" limits: macOS apps show above them; everyone's figures turn orange.
@@ -120,6 +124,7 @@ final class AppModel: ObservableObject {
         confirmActions = defaults.object(forKey: "confirmActions") as? Bool ?? false
         showMemory = defaults.object(forKey: "showMemory") as? Bool ?? true
         appearance = AppearanceMode(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
+        selfHeal = defaults.object(forKey: "selfHeal") as? Bool ?? true
         showBackground = defaults.object(forKey: "showBackground") as? Bool ?? true
         systemApps = SystemAppsMode(rawValue: defaults.string(forKey: "systemApps") ?? "") ?? .whenBusy
         ramLimitGB = defaults.object(forKey: "ramLimitGB") as? Double ?? 1
@@ -164,6 +169,85 @@ final class AppModel: ObservableObject {
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in self?.refreshAccessibility() }
         if notify { requestNotificationPermission() }
+        if let reason = defaults.string(forKey: "selfRestartReason") { // set just before the self-watch restarted us
+            defaults.removeObject(forKey: "selfRestartReason")
+            record(.restart, name: "RestinPID", ok: true, automatic: true, note: "RestinPID restarted itself because \(reason).")
+        }
+        startSelfWatch()
+    }
+
+    // MARK: Self-watch
+
+    /// Limits for restarting RestinPID itself. var so the self-test can shorten them.
+    var selfLimits = (warmup: 30.0, freeze: 10.0, ram: UInt64(500) << 20, cpu: 50.0, cpuFor: 60.0, cooldown: 600.0)
+    /// What happens when a limit trips; the self-test swaps it out.
+    var selfRestartAction: (String) -> Void = { reason in
+        UserDefaults.standard.set(reason, forKey: "selfRestartReason")
+        relaunchSelf(hard: true)
+    }
+
+    private let watchQueue = DispatchQueue(label: "RestinPID.selfwatch", qos: .userInitiated)
+    private var watchTimer: DispatchSourceTimer?
+    // Touched only on watchQueue:
+    private var lastBeat = monotonicNanos()
+    private var lastOwn: (cpuNanos: UInt64, at: UInt64)?
+    private var busySince: UInt64?
+
+    /// Runs on its own queue every 2 s, so a frozen main thread can't stop it. Measures our own RAM and
+    /// CPU, and asks the main thread for a heartbeat; restarts RestinPID if the main thread stops
+    /// answering, RAM grows past the limit, or CPU stays high (only with the setting on).
+    private func startSelfWatch() {
+        let started = monotonicNanos()
+        let timer = DispatchSource.makeTimerSource(queue: watchQueue)
+        timer.schedule(deadline: .now() + 2, repeating: 2)
+        timer.setEventHandler { [weak self] in self?.selfWatchTick(started: started) }
+        timer.resume()
+        watchTimer = timer
+    }
+
+    private func selfWatchTick(started: UInt64) {
+        let now = monotonicNanos(), seconds = { (ns: UInt64) in Double(ns) / 1e9 }
+        let usage = treeUsage(getpid(), bundlePath: Bundle.main.bundlePath)
+        var cpu: Double?
+        if let last = lastOwn, now > last.at {
+            cpu = Double(usage.cpuNanos > last.cpuNanos ? usage.cpuNanos - last.cpuNanos : 0) / Double(now - last.at) * 100
+        }
+        lastOwn = (usage.cpuNanos, now)
+        busySince = (cpu ?? 0) >= selfLimits.cpu ? (busySince ?? now) : nil
+
+        var reason: String?
+        if seconds(now - lastBeat) > selfLimits.freeze {
+            reason = "it stopped responding for \(Int(seconds(now - lastBeat))) seconds"
+        } else if usage.memory > selfLimits.ram {
+            reason = "it was using \(formatBytes(usage.memory)) of RAM"
+        } else if let since = busySince, seconds(now - since) > selfLimits.cpuFor {
+            reason = "it stayed above \(Int(selfLimits.cpu))% CPU for \(Int(selfLimits.cpuFor)) seconds"
+        }
+        let enabled = defaults.object(forKey: "selfHeal") as? Bool ?? true
+        let lastRestart = defaults.object(forKey: "selfRestartedAt") as? Date ?? .distantPast
+        if let reason, enabled, seconds(now - started) > selfLimits.warmup,
+           Date().timeIntervalSince(lastRestart) > selfLimits.cooldown { // never loop
+            defaults.set(Date(), forKey: "selfRestartedAt")
+            lastBeat = now
+            selfRestartAction(reason)
+            return
+        }
+        DispatchQueue.main.async {
+            self.ownMemory = usage.memory
+            self.ownCPU = cpu
+            self.watchQueue.async { self.lastBeat = monotonicNanos() } // heartbeat: the main thread got here
+        }
+    }
+
+    func restartSelf() {
+        record(.restart, name: "RestinPID", ok: true, automatic: false, notifyUser: false)
+        relaunchSelf()
+    }
+
+    /// Immediate, like Force Quit on any other app; works even if the app is misbehaving.
+    func forceQuitSelf() {
+        record(.forceQuit, name: "RestinPID", ok: true, automatic: false, notifyUser: false)
+        kill(getpid(), SIGKILL)
     }
 
     func prepareForDisplay() {
@@ -336,16 +420,16 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func record(_ action: AppAction, name: String, ok: Bool, automatic: Bool) {
+    private func record(_ action: AppAction, name: String, ok: Bool, automatic: Bool, note: String? = nil, notifyUser: Bool = true) {
         history.insert(HistoryEntry(date: Date(), name: name, action: action.verb, ok: ok, automatic: automatic), at: 0)
         if history.count > 200 { history.removeLast(history.count - 200) }
         defaults.set(try? JSONEncoder().encode(history), forKey: "history")
 
-        guard notify else { return }
+        guard notify, notifyUser else { return }
         let content = UNMutableNotificationContent()
         content.title = ok ? (action == .restart ? "Restarted \(name)" : "Force quit \(name)")
                            : "Couldn’t \(action.verb.lowercased()) \(name)"
-        if automatic { content.body = "\(name) was not responding for \(Int(frozenThreshold)) seconds." }
+        if automatic { content.body = note ?? "\(name) was not responding for \(Int(frozenThreshold)) seconds." }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
@@ -439,13 +523,20 @@ func relaunch(_ url: URL) -> Bool {
     return ok
 }
 
-/// Quits and reopens RestinPID (picks up a newly granted permission).
-func relaunchSelf() {
+/// Quits and reopens RestinPID. A helper shell waits for this process to exit, then opens the app
+/// again. hard = SIGKILL now (safe from any thread, works when the main thread is stuck).
+func relaunchSelf(hard: Bool = false) {
     let task = Process()
     task.executableURL = URL(fileURLWithPath: "/bin/sh")
-    task.arguments = ["-c", "sleep 0.5; /usr/bin/open \"$0\"", Bundle.main.bundleURL.path]
+    task.arguments = ["-c", "while kill -0 $1 2>/dev/null; do sleep 0.2; done; /usr/bin/open \"$0\"",
+                      Bundle.main.bundleURL.path, String(getpid())]
     try? task.run()
-    NSApp.terminate(nil)
+    if hard {
+        UserDefaults.standard.synchronize() // about to be killed; flush settings first
+        kill(getpid(), SIGKILL)
+    } else {
+        DispatchQueue.main.async { NSApp.terminate(nil) }
+    }
 }
 
 func isAlive(_ pid: pid_t) -> Bool {
