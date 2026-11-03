@@ -1,6 +1,6 @@
 .build/
 .swiftpm/
 RestinPID.app/
-AppRestarter.app/
+_trash/
 releases/
 .DS_Store
