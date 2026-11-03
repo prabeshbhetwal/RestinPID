@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>AppRestarter</title>
+        <item>
+            <title>2.0</title>
+            <pubDate>Tue, 03 Nov 2026 20:44:16 +1100</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/prabeshbhetwal/AppRestarter/releases/download/v2.0/AppRestarter-2.0.zip" length="1686216" type="application/octet-stream" sparkle:edSignature="GrmSj744Qf7DKD0QmY+OmkbdqKcNnpJaRAZqkrgn1mCfmOLUz3ap/N2GYyb/Mon5hk2BhldK/KXz9bJqqiOEBQ=="/>
+        </item>
+    </channel>
+</rss>
