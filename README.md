@@ -17,6 +17,7 @@
 - Exclude list, restart history, notifications and launch at login.
 - Send Feedback window, which opens a pre-filled GitHub issue.
 - Light, dark or system appearance.
+- RestinPID's own RAM and CPU in a strip of their own, with Restart and Force Quit. It can restart itself if it freezes or slows down.
 - Updates through Sparkle: check every day, week, two weeks or month, or never. A new version shows as a dot on the menu bar icon and a banner in the panel, with its release notes.
 
 Requires macOS 13 or later.
