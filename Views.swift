@@ -428,12 +428,10 @@ struct GeneralTab: View {
                     Text("When busy or not responding").tag(SystemAppsMode.whenBusy)
                     Text("Always").tag(SystemAppsMode.always)
                 }
-                Stepper(value: $model.ramLimitGB, in: 0.25...32, step: 0.25) {
-                    Text("Busy when RAM is over **\(model.ramLimitGB.formatted(.number.precision(.fractionLength(0...2)))) GB**")
-                }
-                Stepper(value: $model.cpuLimit, in: 10...800, step: 10) {
-                    Text("or CPU is over **\(Int(model.cpuLimit))%**")
-                }
+                LimitSlider(title: "Busy when RAM is over", value: $model.ramLimitGB, range: 0.25...16, step: 0.25,
+                            low: "0.25 GB", high: "16 GB") { "\($0.formatted(.number.precision(.fractionLength(0...2)))) GB" }
+                LimitSlider(title: "or CPU is over", value: $model.cpuLimit, range: 10...400, step: 10,
+                            low: "10%", high: "400%") { "\(Int($0))%" }
             } header: {
                 Text("Apps in the list")
             } footer: {
@@ -569,9 +567,8 @@ struct AutoRestartTab: View {
                 .padding(10)
                 .background(RoundedRectangle(cornerRadius: 8).fill(Color.yellow.opacity(0.1)))
             }
-            Stepper(value: $model.frozenThreshold, in: 5...300, step: 5) {
-                Text("Restart after an app is not responding for **\(Int(model.frozenThreshold)) seconds**")
-            }
+            LimitSlider(title: "Restart after an app is not responding for", value: $model.frozenThreshold, range: 5...120, step: 5,
+                        low: "5 s", high: "2 min") { "\(Int($0)) seconds" }
             AppListTab(
                 model: model, apps: $model.watched,
                 caption: "These apps restart automatically when they stop responding."
@@ -676,6 +673,37 @@ struct UpdatesTab: View {
     }
 }
 
+/// Title with the current value on the right, a slider underneath, range ends labelled.
+private struct LimitSlider: View {
+    let title: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let low: String
+    let high: String
+    let format: (Double) -> String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(format(value)).bold().monospacedDigit()
+            }
+            // Rounded in the binding instead of `step:`, which draws a tick for every step.
+            Slider(value: Binding(get: { value }, set: { value = ($0 / step).rounded() * step }), in: range) {
+                Text(title)
+            } minimumValueLabel: {
+                Text(low).font(.caption).foregroundStyle(.secondary)
+            } maximumValueLabel: {
+                Text(high).font(.caption).foregroundStyle(.secondary)
+            }
+            .labelsHidden()
+            .accessibilityValue(format(value))
+        }
+    }
+}
+
 // MARK: - Hotkey recorder
 
 private struct HotkeyRecorder: View {
@@ -685,7 +713,7 @@ private struct HotkeyRecorder: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Button(recording ? "Type shortcut…" : (combo?.display ?? "Click to set")) {
+            Button(recording ? "Type shortcut…" : (combo?.display ?? "Record Shortcut")) {
                 recording ? stop() : start()
             }
             .frame(minWidth: 120)
@@ -696,6 +724,12 @@ private struct HotkeyRecorder: View {
                     .foregroundStyle(.secondary)
                     .help("Remove shortcut")
                     .accessibilityLabel("Remove shortcut")
+            }
+            if combo != .default, !recording {
+                Button("Reset to \(KeyCombo.default.display)") { combo = .default }
+                    .buttonStyle(.link)
+                    .help("Use the default shortcut, \(KeyCombo.default.display)")
+                    .accessibilityLabel("Reset shortcut to default")
             }
         }
         .onDisappear(perform: stop)
