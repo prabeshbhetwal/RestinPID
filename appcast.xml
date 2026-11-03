@@ -1,17 +1,29 @@
 <?xml version="1.0" standalone="yes"?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
-        <title>AppRestarter</title>
+        <title>RestinPID</title>
         <item>
-            <title>2.1</title>
-            <pubDate>Tue, 03 Nov 2026 21:50:08 +1100</pubDate>
-            <sparkle:version>3</sparkle:version>
-            <sparkle:shortVersionString>2.1</sparkle:shortVersionString>
+            <title>3.0</title>
+            <pubDate>Wed, 04 Nov 2026 01:11:02 +1100</pubDate>
+            <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
+            <sparkle:informationalUpdate>
+                <sparkle:belowVersion>4</sparkle:belowVersion>
+            </sparkle:informationalUpdate>
+            <sparkle:version>4</sparkle:version>
+            <sparkle:shortVersionString>3.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/prabeshbhetwal/AppRestarter/releases/download/v2.1/AppRestarter-2.1.zip" length="1764629" type="application/octet-stream" sparkle:edSignature="CXzQp4v5JmXLaGxzocD09N2Bf/RO6nQxqd9D6taQ6XxQijbPbouZvboTx8TB+LIFaeDG7pfTdH+hDc3khTV/AA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/prabeshbhetwal/AppRestarter/releases/download/v2.1/AppRestarter3-2.delta" sparkle:deltaFrom="2" length="186618" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="941872" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="CIwWMy8ruZiuRtzs4iQ2fzg4MZudgaC7L3NKEgJLu/EWx5kdqsd9PJNyElHf6Bh0t4mvVga99dQlOUXjzXzcBw=="/>
-            </sparkle:deltas>
+            <description><![CDATA[<h2>AppRestarter is now RestinPID</h2>
+<p><i>Rest in PID.</i> Same app, new name and identity. Coming from AppRestarter? Download RestinPID, move it to Applications and quit AppRestarter. Your settings and history come across on first launch; switch Accessibility on once for RestinPID.</p>
+<h3>New in 3.0</h3>
+<ul>
+<li><b>Menu Bar &amp; Background</b> group: your menu bar and background apps (Paste, KeepingYouAwake, Raycast…) with RAM and CPU, ready to restart or force quit.</li>
+<li><b>macOS</b> group: apps that came with macOS (Finder, Dock, Control Centre…) appear when they pass a RAM or CPU limit or stop responding. Limits and visibility are in Settings → General.</li>
+<li><b>Send Feedback…</b> in the gear menu: report a problem or suggest a feature.</li>
+<li>Fewer false “Not Responding” badges for background apps.</li>
+<li>Restart All and Force Quit All never touch macOS apps; single actions on them always ask first.</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.0/RestinPID-3.0.zip" length="1847157" type="application/octet-stream" sparkle:edSignature="y9wJOFAZUg4Wo7o0Sx75aewWjjf8ntOH8v9XCBWBY5UFxsxb8bBGU4WPkAFYZOTvNZ/TtwZk5Pe2yZApe0BDCQ=="/>
         </item>
     </channel>
 </rss>
