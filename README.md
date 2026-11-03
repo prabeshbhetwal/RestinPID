@@ -16,7 +16,8 @@
 - Search, pinned apps, and full keyboard control (⌃⌥R opens the panel).
 - Exclude list, restart history, notifications and launch at login.
 - Send Feedback window, which opens a pre-filled GitHub issue.
-- Updates through Sparkle.
+- Light, dark or system appearance.
+- Updates through Sparkle: check every day, week, two weeks or month, or never. A new version shows as a dot on the menu bar icon and a banner in the panel, with its release notes.
 
 Requires macOS 13 or later.
 
@@ -45,5 +46,6 @@ selftest/run.sh                  # logic self-test against a throwaway app
 ## Release
 
 1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Info.plist`.
-2. Run `./release.sh`. It writes `releases/RestinPID-<version>.zip` and updates `appcast.xml`.
-3. Create GitHub release `v<version>` with the zip attached, then commit and push `appcast.xml`.
+2. Write `release-notes/RestinPID-<version>.html` (what’s new; shown in the update window).
+3. Run `./release.sh`. It writes `releases/RestinPID-<version>.zip` and updates `appcast.xml`.
+4. Create GitHub release `v<version>` with the zip attached, then commit and push `appcast.xml`.

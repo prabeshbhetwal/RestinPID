@@ -17,6 +17,7 @@ struct PanelView: View {
         VStack(spacing: 0) {
             header
             Divider()
+            if let version = model.availableUpdate { updateBanner(version) }
             if items.isEmpty { emptyState } else { list(items) }
             Divider()
             footer(items)
@@ -40,7 +41,7 @@ struct PanelView: View {
             }
             Menu {
                 Button("Settings…", action: openSettings).keyboardShortcut(",")
-                Button("Check for Updates…", action: checkForUpdates)
+                Button(model.availableUpdate.map { "Update to \($0)…" } ?? "Check for Updates…", action: checkForUpdates)
                 Button("Send Feedback…", action: sendFeedback)
                 Button("About RestinPID", action: showAbout)
                 Divider()
@@ -57,6 +58,27 @@ struct PanelView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
+    }
+
+    /// Shown after a background check finds an update; opens Sparkle's window with the release notes.
+    private func updateBanner(_ version: String) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.down.circle.fill").foregroundStyle(Color.accentColor)
+                Text("RestinPID \(version) is available").font(.callout.weight(.medium))
+                Spacer()
+                Button("What’s New…", action: checkForUpdates)
+                    .buttonStyle(.link)
+                    .help("See what’s new and install the update")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.accentColor.opacity(0.1))
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { checkForUpdates() }
+            Divider()
+        }
     }
 
     private func list(_ items: [AppItem]) -> some View {
@@ -353,6 +375,12 @@ struct GeneralTab: View {
     var body: some View {
         Form {
             Section {
+                Picker("Appearance", selection: $model.appearance) {
+                    Text("System").tag(AppearanceMode.system)
+                    Text("Light").tag(AppearanceMode.light)
+                    Text("Dark").tag(AppearanceMode.dark)
+                }
+                .pickerStyle(.segmented)
                 Toggle("Launch RestinPID at login", isOn: $model.launchAtLogin)
                 Toggle("Ask before restarting or force quitting an app", isOn: $model.confirmActions)
                 Toggle("Show RAM and CPU use", isOn: $model.showMemory)
@@ -540,9 +568,29 @@ struct HistoryTab: View {
     }
 }
 
+/// How often Sparkle checks. Sparkle's interval is in seconds; Never turns scheduled checks off.
+enum UpdateFrequency: Double, CaseIterable {
+    case daily = 86_400, weekly = 604_800, fortnightly = 1_209_600, monthly = 2_592_000, never = 0
+    var title: String {
+        switch self {
+        case .daily: return "Every day"
+        case .weekly: return "Every week"
+        case .fortnightly: return "Every two weeks"
+        case .monthly: return "Every month"
+        case .never: return "Never"
+        }
+    }
+    static func current(_ updater: SPUUpdater) -> UpdateFrequency {
+        guard updater.automaticallyChecksForUpdates else { return .never }
+        return allCases.filter { $0 != .never }.min { abs($0.rawValue - updater.updateCheckInterval) < abs($1.rawValue - updater.updateCheckInterval) } ?? .daily
+    }
+}
+
 struct UpdatesTab: View {
     let updater: SPUUpdater
-    @State private var automatic = false
+    @ObservedObject var model = AppModel.shared
+    @State private var frequency = UpdateFrequency.daily
+    @State private var autoInstall = false
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -552,19 +600,39 @@ struct UpdatesTab: View {
     var body: some View {
         Form {
             LabeledContent("Current version", value: version)
-            Toggle("Automatically check for updates", isOn: $automatic)
-                .onChange(of: automatic) { updater.automaticallyChecksForUpdates = $0 }
+            Picker("Check for updates", selection: $frequency) {
+                ForEach(UpdateFrequency.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
+            .onChange(of: frequency) { new in
+                updater.automaticallyChecksForUpdates = new != .never
+                if new != .never { updater.updateCheckInterval = new.rawValue }
+            }
+            Toggle("Download and install updates automatically", isOn: $autoInstall)
+                .onChange(of: autoInstall) { updater.automaticallyDownloadsUpdates = $0 }
+                .disabled(frequency == .never)
+            if let version = model.availableUpdate {
+                LabeledContent("Available") {
+                    Text("RestinPID \(version)").foregroundStyle(Color.accentColor)
+                }
+            }
             LabeledContent("Last checked") {
                 Text(updater.lastUpdateCheckDate?.formatted(date: .abbreviated, time: .shortened) ?? "Never")
             }
             HStack {
                 Spacer()
-                Button("Check for Updates Now") { updater.checkForUpdates() }
+                Button(model.availableUpdate == nil ? "Check for Updates Now" : "See What’s New…") { updater.checkForUpdates() }
                     .disabled(!updater.canCheckForUpdates)
             }
+            Text("When a check finds an update, a dot appears on the menu bar icon and a banner at the top of the panel. Click either to read what’s new before installing.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .formStyle(.grouped)
-        .onAppear { automatic = updater.automaticallyChecksForUpdates }
+        .onAppear {
+            frequency = .current(updater)
+            autoInstall = updater.automaticallyDownloadsUpdates
+        }
     }
 }
 
@@ -614,6 +682,25 @@ private struct HotkeyRecorder: View {
 }
 
 // MARK: - Helpers
+/// SF Symbol with a dot cut into its top-right corner; stays a template so it matches the menu bar.
+func badgedSymbol(_ name: String, label: String) -> NSImage? {
+    guard let base = NSImage(systemSymbolName: name, accessibilityDescription: label) else { return nil }
+    let image = NSImage(size: base.size, flipped: false) { rect in
+        base.draw(in: rect)
+        let d = rect.width * 0.38
+        let dot = NSRect(x: rect.maxX - d, y: rect.maxY - d, width: d, height: d)
+        NSGraphicsContext.current?.compositingOperation = .clear
+        NSBezierPath(ovalIn: dot.insetBy(dx: -1.5, dy: -1.5)).fill()
+        NSGraphicsContext.current?.compositingOperation = .sourceOver
+        NSColor.black.setFill()
+        NSBezierPath(ovalIn: dot).fill()
+        return true
+    }
+    image.isTemplate = true
+    image.accessibilityDescription = label
+    return image
+}
+
 
 private func appURL(_ bundleID: String) -> URL? {
     NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)

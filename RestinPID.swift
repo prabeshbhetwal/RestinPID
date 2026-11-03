@@ -5,7 +5,8 @@ import SwiftUI
 import UserNotifications
 
 @main
-final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate,
+    SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
     static func main() {
         let app = NSApplication.shared
         let delegate = AppDelegate()
@@ -15,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     private let model = AppModel.shared
-    private let updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    private lazy var updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: self)
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var settingsWindow: NSWindow?
@@ -26,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
         UNUserNotificationCenter.current().delegate = self
+        _ = updater // start Sparkle's schedule
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.target = self
@@ -54,14 +56,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             return self.model.handleKey(event) ? nil : event
         }
 
-        // Menu bar icon turns into a warning when any listed app is frozen.
+        // Menu bar icon: a warning when any listed app is frozen, a dot when an update is waiting.
         model.$all
             .map { [model] in $0.contains { $0.frozen && model.isShown($0) } }
-            .removeDuplicates()
-            .sink { [weak self] anyFrozen in
-                let name = anyFrozen ? "exclamationmark.arrow.circlepath" : "arrow.clockwise.circle"
-                let label = anyFrozen ? "RestinPID – an app is not responding" : "RestinPID"
-                self?.statusItem.button?.image = NSImage(systemSymbolName: name, accessibilityDescription: label)
+            .combineLatest(model.$availableUpdate.map { $0 != nil })
+            .removeDuplicates { $0 == $1 }
+            .sink { [weak self] anyFrozen, update in
+                self?.statusItem.button?.image = anyFrozen
+                    ? NSImage(systemSymbolName: "exclamationmark.arrow.circlepath", accessibilityDescription: "RestinPID – an app is not responding")
+                    : update ? badgedSymbol("arrow.clockwise.circle", label: "RestinPID – update available")
+                    : NSImage(systemSymbolName: "arrow.clockwise.circle", accessibilityDescription: "RestinPID")
+            }
+            .store(in: &subscriptions)
+
+        model.$appearance
+            .sink { [weak self] mode in
+                NSApp.appearance = mode.nsAppearance
+                self?.popover.appearance = mode.nsAppearance
             }
             .store(in: &subscriptions)
 
@@ -194,9 +205,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         return main
     }
 
+    // MARK: Updates (Sparkle gentle reminders)
+
+    // A menu bar app is rarely in front, so scheduled checks don't pop a window over the user's work.
+    // The menu bar dot, panel banner and a notification announce it; any of them opens Sparkle's
+    // window, which shows the release notes before installing.
+    var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool) -> Bool {
+        false
+    }
+
+    func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState) {
+        model.availableUpdate = update.displayVersionString
+        guard !handleShowingUpdate, !state.userInitiated else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "RestinPID \(update.displayVersionString) is available"
+        content.body = "Click to see what’s new."
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "update", content: content, trigger: nil))
+    }
+
+    func standardUserDriverWillFinishUpdateSession() {
+        model.availableUpdate = nil
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.notification.request.identifier == "update" { checkForUpdates() }
+        completionHandler()
+    }
+
     // Show notifications even while our popover is in front.
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
     }
 }
+

@@ -9,6 +9,18 @@ enum AppKind: Int, Comparable {
     static func < (a: AppKind, b: AppKind) -> Bool { a.rawValue < b.rawValue }
 }
 
+/// Light, dark, or follow the system.
+enum AppearanceMode: String, CaseIterable {
+    case system, light, dark
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .system: return nil
+        case .light: return NSAppearance(named: .aqua)
+        case .dark: return NSAppearance(named: .darkAqua)
+        }
+    }
+}
+
 /// When apps that ship with macOS appear in the list.
 enum SystemAppsMode: String, CaseIterable {
     case never, whenBusy, always
@@ -59,6 +71,9 @@ final class AppModel: ObservableObject {
     @Published var frozenThreshold: Double { didSet { defaults.set(frozenThreshold, forKey: "frozenThreshold") } }
     @Published var confirmActions: Bool { didSet { defaults.set(confirmActions, forKey: "confirmActions") } }
     @Published var showMemory: Bool { didSet { defaults.set(showMemory, forKey: "showMemory") } }
+    @Published var appearance: AppearanceMode { didSet { defaults.set(appearance.rawValue, forKey: "appearance") } }
+    /// Version found by a background update check, shown as a badge until the user looks at it.
+    @Published var availableUpdate: String?
     @Published var showBackground: Bool { didSet { defaults.set(showBackground, forKey: "showBackground") } }
     @Published var systemApps: SystemAppsMode { didSet { defaults.set(systemApps.rawValue, forKey: "systemApps") } }
     /// "High use" limits: macOS apps show above them; everyone's figures turn orange.
@@ -104,6 +119,7 @@ final class AppModel: ObservableObject {
         frozenThreshold = defaults.object(forKey: "frozenThreshold") as? Double ?? 15
         confirmActions = defaults.object(forKey: "confirmActions") as? Bool ?? false
         showMemory = defaults.object(forKey: "showMemory") as? Bool ?? true
+        appearance = AppearanceMode(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         showBackground = defaults.object(forKey: "showBackground") as? Bool ?? true
         systemApps = SystemAppsMode(rawValue: defaults.string(forKey: "systemApps") ?? "") ?? .whenBusy
         ramLimitGB = defaults.object(forKey: "ramLimitGB") as? Double ?? 1
