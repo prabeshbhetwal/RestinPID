@@ -3,25 +3,28 @@
     <channel>
         <title>RestinPID</title>
         <item>
-            <title>3.1</title>
-            <pubDate>Wed, 04 Nov 2026 01:26:22 +1100</pubDate>
+            <title>3.2</title>
+            <pubDate>Wed, 04 Nov 2026 01:40:53 +1100</pubDate>
             <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
             <sparkle:informationalUpdate>
                 <sparkle:belowVersion>4</sparkle:belowVersion>
             </sparkle:informationalUpdate>
-            <sparkle:version>5</sparkle:version>
-            <sparkle:shortVersionString>3.1</sparkle:shortVersionString>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>3.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RestinPID 3.1</h2>
+            <description><![CDATA[<h2>RestinPID 3.2</h2>
 <ul>
-<li><b>Appearance:</b> choose System, Light or Dark in Settings → General.</li>
-<li><b>Update schedule:</b> check every day, week, two weeks, month, or never, in Settings → Updates. You can also let updates download and install by themselves.</li>
-<li><b>See updates at a glance:</b> when a new version is out, a dot appears on the menu bar icon, a banner appears at the top of the panel, and you get a notification. Click any of them to read what’s new before installing.</li>
+<li><b>RestinPID’s own use:</b> its RAM and CPU now show in their own strip at the bottom of the panel, with Restart and Force Quit buttons. It stays out of the app list and out of Restart All / Force Quit All.</li>
+<li><b>Restarts itself if it gets stuck:</b> RestinPID restarts itself if it stops responding for 10 seconds, uses over 500 MB of RAM, or stays above 50% CPU for a minute. This happens at most once every 10 minutes, and History says why. Turn it off in Settings → General.</li>
+<li><b>Sliders:</b> the RAM, CPU and “not responding” limits are now sliders that show their value.</li>
+<li><b>Shortcut reset:</b> a “Reset to ⌃⌥R” link brings back the default panel shortcut, including after you remove it.</li>
+<li><b>Fixed:</b> the Send Feedback window opened empty.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.1/RestinPID-3.1.zip" length="1895213" type="application/octet-stream" sparkle:edSignature="LxN/kiiKRvvUvJ7grKqCXZ9qOCyqatqdTrBzI02t7Z7P1dRpBszli9C/F/hueSYiO5MNwyKO8HJuGiGVP1l+BA=="/>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.2/RestinPID-3.2.zip" length="1945645" type="application/octet-stream" sparkle:edSignature="5QqhG0hyps/Y3vBjJJeyejqdyeGblCzAmEmRm3BuTIaOy+1XKa9g9R4L7fMj5VNVeANMpG5hNlBPpP7829rWAA=="/>
             <sparkle:deltas>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.1/RestinPID5-4.delta" sparkle:deltaFrom="4" length="176686" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="3dZxOTDJbyIW2SbxZ8/AEOxWEBiQeRh2cVdkG3iy4ZI7kf6r+75ZMwy79mbnpwnn21pkaXLaGr75r/9iaiJDCQ=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.2/RestinPID6-5.delta" sparkle:deltaFrom="5" length="200558" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="aFZe6l8hFAtmMkfGC74mG/OHDZULpfuIGlmBBLCjZfu072yek/z7H/PVuWcUZQ3XzlGlSFowgYaxRCFkZ/4WCw=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.2/RestinPID6-4.delta" sparkle:deltaFrom="4" length="247126" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ngm6jt1lEqF1SHMCRqGzJuwnIXw3BDZ8lpnerChUyYO7sG0o+6cBEOB+Jtefu7YVAtdeILHMvS/H8ykJJlswAg=="/>
             </sparkle:deltas>
         </item>
     </channel>
