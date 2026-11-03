@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var settingsWindow: NSWindow?
+    private var feedbackWindow: NSWindow?
     private var keyMonitor: Any?
     private var subscriptions = Set<AnyCancellable>()
 
@@ -35,7 +36,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             model: model,
             openSettings: { [weak self] in self?.showSettings() },
             checkForUpdates: { [weak self] in self?.checkForUpdates() },
-            showAbout: { [weak self] in self?.showAbout() }
+            showAbout: { [weak self] in self?.showAbout() },
+            sendFeedback: { [weak self] in self?.showFeedback() }
         )
         let hosting = NSHostingController(rootView: panel)
         hosting.sizingOptions = .preferredContentSize
@@ -54,11 +56,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
         // Menu bar icon turns into a warning when any listed app is frozen.
         model.$all
-            .map { $0.contains(where: \.frozen) }
+            .map { [model] in $0.contains { $0.frozen && model.isShown($0) } }
             .removeDuplicates()
             .sink { [weak self] anyFrozen in
                 let name = anyFrozen ? "exclamationmark.arrow.circlepath" : "arrow.clockwise.circle"
-                let label = anyFrozen ? "AppRestarter – an app is not responding" : "AppRestarter"
+                let label = anyFrozen ? "RestinPID – an app is not responding" : "RestinPID"
                 self?.statusItem.button?.image = NSImage(systemSymbolName: name, accessibilityDescription: label)
             }
             .store(in: &subscriptions)
@@ -113,12 +115,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
+    @objc func showFeedback() {
+        popover.performClose(nil)
+        if feedbackWindow == nil {
+            let window = NSWindow(contentViewController: NSHostingController(rootView: FeedbackView()))
+            window.title = "Send Feedback"
+            window.styleMask = [.titled, .closable]
+            window.isReleasedWhenClosed = false
+            window.center()
+            feedbackWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        feedbackWindow?.makeKeyAndOrderFront(nil)
+    }
+
     @objc func showAbout() {
         popover.performClose(nil)
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(options: [
             .credits: NSAttributedString(
-                string: "Force quit and restart frozen apps from the menu bar.",
+                string: "Rest in PID: force quit and restart frozen or greedy apps from the menu bar.",
                 attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]
             ),
         ])
@@ -134,14 +150,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     private func makeStatusMenu() -> NSMenu {
         let menu = NSMenu()
-        let open = menu.addItem(withTitle: "Open AppRestarter", action: #selector(togglePopover), keyEquivalent: "")
+        let open = menu.addItem(withTitle: "Open RestinPID", action: #selector(togglePopover), keyEquivalent: "")
         if let combo = model.hotkey { open.title += "  (\(combo.display))" }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
-        menu.addItem(withTitle: "About AppRestarter", action: #selector(showAbout), keyEquivalent: "")
+        menu.addItem(withTitle: "Send Feedback…", action: #selector(showFeedback), keyEquivalent: "")
+        menu.addItem(withTitle: "About RestinPID", action: #selector(showAbout), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit AppRestarter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit RestinPID", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         for item in menu.items where item.action != #selector(NSApplication.terminate(_:)) { item.target = self }
         return menu
     }
@@ -151,13 +168,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         let main = NSMenu()
 
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About AppRestarter", action: #selector(showAbout), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: "About RestinPID", action: #selector(showAbout), keyEquivalent: "").target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",").target = self
         appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: "Send Feedback…", action: #selector(showFeedback), keyEquivalent: "").target = self
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit AppRestarter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        main.addItem(withTitle: "AppRestarter", action: nil, keyEquivalent: "").submenu = appMenu
+        appMenu.addItem(withTitle: "Quit RestinPID", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        main.addItem(withTitle: "RestinPID", action: nil, keyEquivalent: "").submenu = appMenu
 
         let edit = NSMenu(title: "Edit")
         edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")

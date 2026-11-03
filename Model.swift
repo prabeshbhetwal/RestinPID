@@ -1,9 +1,22 @@
 import AppKit
+import Security
 import ServiceManagement
 import UserNotifications
 
+/// Dock apps, third-party menu bar / background apps, and apps that ship with macOS.
+enum AppKind: Int, Comparable {
+    case app, background, system
+    static func < (a: AppKind, b: AppKind) -> Bool { a.rawValue < b.rawValue }
+}
+
+/// When apps that ship with macOS appear in the list.
+enum SystemAppsMode: String, CaseIterable {
+    case never, whenBusy, always
+}
+
 struct AppItem: Identifiable {
     let app: NSRunningApplication
+    let kind: AppKind
     var memory: UInt64 = 0   // RAM, bytes: app + its helper processes
     var cpu: Double?         // % of one core, like Activity Monitor; nil until the second sample
     var frozen = false
@@ -46,6 +59,11 @@ final class AppModel: ObservableObject {
     @Published var frozenThreshold: Double { didSet { defaults.set(frozenThreshold, forKey: "frozenThreshold") } }
     @Published var confirmActions: Bool { didSet { defaults.set(confirmActions, forKey: "confirmActions") } }
     @Published var showMemory: Bool { didSet { defaults.set(showMemory, forKey: "showMemory") } }
+    @Published var showBackground: Bool { didSet { defaults.set(showBackground, forKey: "showBackground") } }
+    @Published var systemApps: SystemAppsMode { didSet { defaults.set(systemApps.rawValue, forKey: "systemApps") } }
+    /// "High use" limits: macOS apps show above them; everyone's figures turn orange.
+    @Published var ramLimitGB: Double { didSet { defaults.set(ramLimitGB, forKey: "ramLimitGB") } }
+    @Published var cpuLimit: Double { didSet { defaults.set(cpuLimit, forKey: "cpuLimit") } }
     @Published var notify: Bool {
         didSet {
             defaults.set(notify, forKey: "notify")
@@ -64,7 +82,7 @@ final class AppModel: ObservableObject {
             do {
                 if newValue { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             } catch {
-                NSLog("AppRestarter: launch at login failed: \(error)")
+                NSLog("RestinPID: launch at login failed: \(error)")
             }
         }
     }
@@ -74,14 +92,22 @@ final class AppModel: ObservableObject {
     private var polling = false
     private var frozenSince: [pid_t: Date] = [:]
     private var lastCPU: [pid_t: (cpuNanos: UInt64, at: UInt64)] = [:]
+    private var highUseAt: [pid_t: Date] = [:]  // last time over a limit; keeps macOS apps from flickering
+    private var axAnswered = Set<pid_t>()       // answered an Accessibility ping at least once
+    private var axSilent = Set<pid_t>()         // background apps that never answer; not pinged again
 
     private init() {
+        Self.migrateOldSettings()
         excluded = Set(defaults.stringArray(forKey: "excluded") ?? [])
         pinned = Set(defaults.stringArray(forKey: "pinned") ?? [])
         watched = Set(defaults.stringArray(forKey: "watched") ?? [])
         frozenThreshold = defaults.object(forKey: "frozenThreshold") as? Double ?? 15
         confirmActions = defaults.object(forKey: "confirmActions") as? Bool ?? false
         showMemory = defaults.object(forKey: "showMemory") as? Bool ?? true
+        showBackground = defaults.object(forKey: "showBackground") as? Bool ?? true
+        systemApps = SystemAppsMode(rawValue: defaults.string(forKey: "systemApps") ?? "") ?? .whenBusy
+        ramLimitGB = defaults.object(forKey: "ramLimitGB") as? Double ?? 1
+        cpuLimit = defaults.object(forKey: "cpuLimit") as? Double ?? 50
         notify = defaults.object(forKey: "notify") as? Bool ?? true
         if let data = defaults.data(forKey: "hotkey") {
             hotkey = try? JSONDecoder().decode(KeyCombo.self, from: data) // empty Data = user removed it
@@ -89,6 +115,18 @@ final class AppModel: ObservableObject {
             hotkey = .default
         }
         history = (defaults.data(forKey: "history")).flatMap { try? JSONDecoder().decode([HistoryEntry].self, from: $0) } ?? []
+    }
+
+    /// One-time copy of settings from the app's old identity (AppRestarter 2.x).
+    private static func migrateOldSettings() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: "migratedFromAppRestarter") else { return }
+        defaults.set(true, forKey: "migratedFromAppRestarter")
+        guard let old = defaults.persistentDomain(forName: "com.prabeshbhetwal.AppRestarter") else { return }
+        for key in ["excluded", "pinned", "watched", "frozenThreshold", "confirmActions", "showMemory", "notify", "hotkey", "history"]
+        where defaults.object(forKey: key) == nil {
+            if let value = old[key] { defaults.set(value, forKey: key) }
+        }
     }
 
     func start() {
@@ -123,24 +161,66 @@ final class AppModel: ObservableObject {
     var visible: [AppItem] {
         let q = query.trimmingCharacters(in: .whitespaces)
         return all
-            .filter { q.isEmpty || $0.name.localizedCaseInsensitiveContains(q) }
-            .sorted { (pinned.contains($0.bundleID) ? 0 : 1, $0.name.lowercased()) < (pinned.contains($1.bundleID) ? 0 : 1, $1.name.lowercased()) }
+            .filter { isShown($0) && (q.isEmpty || $0.name.localizedCaseInsensitiveContains(q)) }
+            .sorted { rank($0) < rank($1) }
     }
 
-    /// User-installed, regular (Dock) apps: not under /System, not this app, not excluded.
-    static func isUserApp(_ app: NSRunningApplication) -> Bool {
-        guard app.activationPolicy == .regular,
-              app.processIdentifier != getpid(),
-              app.bundleIdentifier != nil,
-              let path = app.bundleURL?.path else { return false }
-        return !path.hasPrefix("/System/")
+    private func rank(_ item: AppItem) -> (Int, Int, String) {
+        (pinned.contains(item.bundleID) ? 0 : 1, item.kind.rawValue, item.name.lowercased())
+    }
+
+    func isShown(_ item: AppItem) -> Bool {
+        if pinned.contains(item.bundleID) { return true }
+        switch item.kind {
+        case .app: return true
+        case .background: return showBackground
+        case .system:
+            switch systemApps {
+            case .never: return false
+            case .always: return true
+            case .whenBusy: return item.frozen || highUseAt[item.id].map { Date().timeIntervalSince($0) < 15 } == true
+            }
+        }
+    }
+
+    func isHighRAM(_ item: AppItem) -> Bool { Double(item.memory) >= ramLimitGB * 1_073_741_824 }
+    func isHighCPU(_ item: AppItem) -> Bool { (item.cpu ?? 0) >= cpuLimit }
+
+    /// Never listed: killing these logs you out or breaks password prompts.
+    private static let neverList: Set<String> = ["com.apple.loginwindow", "com.apple.SecurityAgent"]
+
+    /// nil = not listable: no bundle, this app, a helper inside another app (counted toward
+    /// that app), or a command-line tool.
+    static func kind(of app: NSRunningApplication) -> AppKind? {
+        guard app.processIdentifier != getpid(), !app.isTerminated,
+              let id = app.bundleIdentifier, !neverList.contains(id),
+              let path = app.bundleURL?.path, path.hasSuffix(".app"),
+              !path.dropLast(4).contains(".app/") else { return nil }
+        if isApple(app, path: path) { return .system }
+        return app.activationPolicy == .regular ? .app : .background
+    }
+
+    private static var appleCache: [String: Bool] = [:]
+
+    /// Ships with macOS: under /System, or signed by Apple itself (Safari, for example).
+    /// App Store apps are signed differently, so they count as yours.
+    private static func isApple(_ app: NSRunningApplication, path: String) -> Bool {
+        if path.hasPrefix("/System/") { return true }
+        if let known = appleCache[path] { return known }
+        var code: SecCode?, requirement: SecRequirement?
+        let apple = SecCodeCopyGuestWithAttributes(nil, [kSecGuestAttributePid: app.processIdentifier] as CFDictionary, [], &code) == errSecSuccess
+            && SecRequirementCreateWithString("anchor apple" as CFString, [], &requirement) == errSecSuccess
+            && SecCodeCheckValidity(code!, [], requirement) == errSecSuccess
+        appleCache[path] = apple
+        return apple
     }
 
     private func rebuild() {
         let previous = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        all = NSWorkspace.shared.runningApplications
-            .filter { Self.isUserApp($0) && !excluded.contains($0.bundleIdentifier ?? "") && !$0.isTerminated }
-            .map { previous[$0.processIdentifier] ?? AppItem(app: $0) }
+        all = NSWorkspace.shared.runningApplications.compactMap { app in
+            guard !excluded.contains(app.bundleIdentifier ?? ""), let kind = Self.kind(of: app) else { return nil }
+            return previous[app.processIdentifier] ?? AppItem(app: app, kind: kind)
+        }
         if selection == nil || !visible.contains(where: { $0.id == selection }) { selection = visible.first?.id }
     }
 
@@ -148,11 +228,12 @@ final class AppModel: ObservableObject {
         guard !polling else { return }
         polling = true
         let targets = all.map { ($0.id, $0.app.bundleURL?.path ?? "/nonexistent") }
-        let pids = targets.map(\.0)
+        let pids = Set(targets.map(\.0))
         let trusted = AXIsProcessTrusted()
+        let silent = axSilent
         DispatchQueue.global(qos: .utility).async {
             let status = Dictionary(uniqueKeysWithValues: targets.map { pid, bundle in
-                (pid, (usage: treeUsage(pid, bundlePath: bundle), frozen: trusted && isUnresponsive(pid)))
+                (pid, (usage: treeUsage(pid, bundlePath: bundle), ping: trusted && !silent.contains(pid) ? axPing(pid) : nil))
             })
             let now = monotonicNanos()
             DispatchQueue.main.async {
@@ -162,16 +243,28 @@ final class AppModel: ObservableObject {
                     var item = item
                     guard let s = status[item.id] else { return item }
                     item.memory = s.usage.memory
-                    item.frozen = s.frozen
+                    if s.ping == true { self.axAnswered.insert(item.id) }
+                    // Dock apps always answer Accessibility, so a timeout means frozen. Background apps
+                    // count only if they answered before; some never do (an instant error, or no reply).
+                    let answers = item.app.activationPolicy == .regular || self.axAnswered.contains(item.id)
+                    item.frozen = s.ping == false && answers
+                    if !answers, s.ping != true, trusted { self.axSilent.insert(item.id) }
                     if let last = self.lastCPU[item.id], now > last.at {
                         // ponytail: a helper exiting between samples drops its time; clamp at 0
                         let used = s.usage.cpuNanos > last.cpuNanos ? s.usage.cpuNanos - last.cpuNanos : 0
                         item.cpu = Double(used) / Double(now - last.at) * 100
                     }
                     self.lastCPU[item.id] = (s.usage.cpuNanos, now)
+                    if self.isHighRAM(item) || self.isHighCPU(item) { self.highUseAt[item.id] = Date() }
                     return item
                 }
-                self.lastCPU = self.lastCPU.filter { pid, _ in pids.contains(pid) }
+                self.lastCPU = self.lastCPU.filter { pids.contains($0.key) }
+                self.highUseAt = self.highUseAt.filter { pids.contains($0.key) }
+                self.axAnswered.formIntersection(pids)
+                self.axSilent.formIntersection(pids)
+                if self.selection == nil || !self.visible.contains(where: { $0.id == self.selection }) {
+                    self.selection = self.visible.first?.id
+                }
                 self.runWatchdog()
             }
         }
@@ -191,16 +284,18 @@ final class AppModel: ObservableObject {
 
     // MARK: Actions
 
-    /// User-triggered. Bulk actions always ask; single ones ask if the setting is on.
+    /// User-triggered. Bulk actions and macOS apps always ask; others ask if the setting is on.
     func perform(_ action: AppAction, on items: [AppItem]) {
         let items = items.filter { !busy.contains($0.id) }
         guard !items.isEmpty else { return }
-        if items.count > 1 || confirmActions {
+        let system = items.contains { $0.kind == .system }
+        if items.count > 1 || confirmActions || system {
             let alert = NSAlert()
             alert.messageText = items.count > 1 ? "\(action.verb) \(items.count) apps?" : "\(action.verb) \(items[0].name)?"
             alert.informativeText = items.count > 1
                 ? items.map(\.name).joined(separator: ", ") + "\n\nUnsaved work in these apps will be lost."
-                : "Unsaved work in this app will be lost."
+                : system ? "\(items[0].name) is part of macOS. Unsaved work in it will be lost, and macOS may restart it by itself."
+                         : "Unsaved work in this app will be lost."
             alert.alertStyle = .warning
             alert.addButton(withTitle: action.verb)
             alert.addButton(withTitle: "Cancel")
@@ -213,10 +308,10 @@ final class AppModel: ObservableObject {
     private func run(_ action: AppAction, on items: [AppItem], automatic: Bool) {
         for item in items {
             busy.insert(item.id)
-            let app = item.app, name = item.name
+            let app = item.app, name = item.name, system = item.kind == .system, id = item.bundleID
             DispatchQueue.global(qos: .userInitiated).async {
                 var ok = forceKill(app)
-                if ok, action == .restart, let url = app.bundleURL { ok = relaunch(url) }
+                if ok, action == .restart, let url = app.bundleURL { ok = (system && cameBack(id)) || relaunch(url) }
                 DispatchQueue.main.async {
                     self.busy.remove(app.processIdentifier)
                     self.record(action, name: name, ok: ok, automatic: automatic)
@@ -278,7 +373,7 @@ final class AppModel: ObservableObject {
 
     // MARK: Permissions
 
-    /// Adds AppRestarter to the Accessibility list (first time) and opens that pane.
+    /// Adds RestinPID to the Accessibility list (first time) and opens that pane.
     func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         accessibilityTrusted = AXIsProcessTrustedWithOptions(options)
@@ -321,14 +416,14 @@ func relaunch(_ url: URL) -> Bool {
     config.activates = true
     NSWorkspace.shared.openApplication(at: url, configuration: config) { app, error in
         ok = app != nil
-        if let error { NSLog("AppRestarter: relaunch failed: \(error)") }
+        if let error { NSLog("RestinPID: relaunch failed: \(error)") }
         done.signal()
     }
     _ = done.wait(timeout: .now() + 15)
     return ok
 }
 
-/// Quits and reopens AppRestarter (picks up a newly granted permission).
+/// Quits and reopens RestinPID (picks up a newly granted permission).
 func relaunchSelf() {
     let task = Process()
     task.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -349,12 +444,25 @@ func adminKill(_ pid: pid_t) {
     task.waitUntilExit()
 }
 
-/// Pings the app's main thread through Accessibility; a frozen app can't answer within 0.5 s.
-func isUnresponsive(_ pid: pid_t) -> Bool {
+/// Pings the app's main thread through Accessibility. true = answered; false = no answer
+/// within 0.5 s (frozen); nil = refused at once (the app doesn't support Accessibility).
+func axPing(_ pid: pid_t) -> Bool? {
     let element = AXUIElementCreateApplication(pid)
     AXUIElementSetMessagingTimeout(element, 0.5)
     var value: CFTypeRef?
-    return AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &value) == .cannotComplete
+    let start = monotonicNanos()
+    let result = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &value)
+    if result == .success { return true }
+    return result == .cannotComplete && monotonicNanos() - start > 400_000_000 ? false : nil
+}
+
+/// macOS restarts many of its own apps (Dock, Finder, Control Center) by itself; wait up to 3 s for that.
+func cameBack(_ bundleID: String) -> Bool {
+    for _ in 0..<30 {
+        if !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty { return true }
+        usleep(100_000)
+    }
+    return false
 }
 
 /// RAM (same "Memory" figure as Activity Monitor) and total CPU time for an app plus the

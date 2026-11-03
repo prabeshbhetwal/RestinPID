@@ -1,0 +1,17 @@
+name: Report a problem
+description: Something in RestinPID doesn't work as expected.
+labels: [bug]
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened, and what did you expect?
+      description: Which app were you restarting or force quitting? Steps to make it happen again help a lot.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Versions
+      description: Filled in by the app's Send Feedback window, or from About RestinPID.
+      placeholder: RestinPID 3.0 (4) · macOS 15.1 · Apple silicon

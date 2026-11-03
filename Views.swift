@@ -9,6 +9,7 @@ struct PanelView: View {
     let openSettings: () -> Void
     let checkForUpdates: () -> Void
     let showAbout: () -> Void
+    let sendFeedback: () -> Void
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -40,9 +41,10 @@ struct PanelView: View {
             Menu {
                 Button("Settings…", action: openSettings).keyboardShortcut(",")
                 Button("Check for Updates…", action: checkForUpdates)
-                Button("About AppRestarter", action: showAbout)
+                Button("Send Feedback…", action: sendFeedback)
+                Button("About RestinPID", action: showAbout)
                 Divider()
-                Button("Quit AppRestarter") { NSApp.terminate(nil) }.keyboardShortcut("q")
+                Button("Quit RestinPID") { NSApp.terminate(nil) }.keyboardShortcut("q")
             } label: {
                 Image(systemName: "gearshape")
             }
@@ -60,21 +62,23 @@ struct PanelView: View {
     private func list(_ items: [AppItem]) -> some View {
         let pinned = items.filter { model.pinned.contains($0.bundleID) }
         let others = items.filter { !model.pinned.contains($0.bundleID) }
+        let groups: [(String, [AppItem])] = [
+            ("Pinned", pinned),
+            ("Apps", others.filter { $0.kind == .app }),
+            ("Menu Bar & Background", others.filter { $0.kind == .background }),
+            (model.systemApps == .whenBusy ? "macOS · Busy or Not Responding" : "macOS", others.filter { $0.kind == .system }),
+        ].filter { !$0.1.isEmpty }
         return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
-                    if !pinned.isEmpty {
-                        SectionHeader(title: "Pinned")
-                        ForEach(pinned) { AppRow(model: model, item: $0) }
-                    }
-                    if !others.isEmpty {
-                        SectionHeader(title: pinned.isEmpty ? "Running Apps" : "Other Running Apps")
-                        ForEach(others) { AppRow(model: model, item: $0) }
+                    ForEach(groups, id: \.0) { title, rows in
+                        SectionHeader(title: title)
+                        ForEach(rows) { AppRow(model: model, item: $0) }
                     }
                 }
                 .padding(6)
             }
-            .frame(height: min(CGFloat(items.count) * 46 + (pinned.isEmpty ? 30 : 60), 440))
+            .frame(height: min(CGFloat(items.count) * 46 + CGFloat(groups.count) * 30, 520))
             .onChange(of: model.selection) { id in
                 if let id { proxy.scrollTo(id) }
             }
@@ -94,19 +98,20 @@ struct PanelView: View {
     }
 
     private func footer(_ items: [AppItem]) -> some View {
-        HStack(spacing: 4) {
+        let items = items.filter { $0.kind != .system } // never bulk-kill macOS's own apps
+        return HStack(spacing: 4) {
             Button { model.perform(.restart, on: items) } label: { Label("Restart All", systemImage: "arrow.clockwise") }
                 .buttonStyle(HoverPillStyle(tint: .accentColor))
-                .help("Restart every app in the list")
+                .help("Restart every app in the list except macOS apps")
                 .disabled(items.isEmpty)
             Button { model.perform(.forceQuit, on: items) } label: { Label("Force Quit All", systemImage: "xmark.octagon") }
                 .buttonStyle(HoverPillStyle(tint: .red))
-                .help("Force quit every app in the list")
+                .help("Force quit every app in the list except macOS apps")
                 .disabled(items.isEmpty)
             Spacer()
             Button { NSApp.terminate(nil) } label: { Label("Quit", systemImage: "power") }
                 .buttonStyle(HoverPillStyle(tint: .primary))
-                .help("Quit AppRestarter (⌘Q)")
+                .help("Quit RestinPID (⌘Q)")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -206,19 +211,18 @@ private struct AppRow: View {
         .accessibilityAction(named: "Exclude from List") { model.excluded.insert(item.bundleID) }
     }
 
-    /// "RAM 515 MB · CPU 2.3%". CPU turns orange above one full core.
+    /// "RAM 515 MB · CPU 2.3%". Each turns orange above the high-use limit in Settings.
     private var usage: some View {
         HStack(spacing: 6) {
-            Text("RAM \(formatBytes(item.memory))")
+            Text("RAM \(formatBytes(item.memory))").foregroundStyle(model.isHighRAM(item) ? Color.orange : Color.secondary)
             if let cpu = item.cpu {
                 Text("·").foregroundStyle(.tertiary)
-                Text("CPU \(formatCPU(cpu))").foregroundStyle(cpu >= 100 ? Color.orange : Color.secondary)
+                Text("CPU \(formatCPU(cpu))").foregroundStyle(model.isHighCPU(item) ? Color.orange : Color.secondary)
             }
         }
         .font(.caption)
-        .foregroundStyle(.secondary)
         .monospacedDigit()
-        .help("RAM: memory used by the app and its helper processes.\nCPU: processor use, where 100% is one full core (same as Activity Monitor).")
+        .help("RAM: memory used by the app and its helper processes.\nCPU: processor use, where 100% is one full core (same as Activity Monitor).\nOrange: above the high-use limit in Settings → General.")
     }
 
     private var accessibilityText: String {
@@ -349,15 +353,36 @@ struct GeneralTab: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Launch AppRestarter at login", isOn: $model.launchAtLogin)
+                Toggle("Launch RestinPID at login", isOn: $model.launchAtLogin)
                 Toggle("Ask before restarting or force quitting an app", isOn: $model.confirmActions)
                 Toggle("Show RAM and CPU use", isOn: $model.showMemory)
                 Toggle("Notify after each restart or force quit", isOn: $model.notify)
                 LabeledContent("Open panel shortcut") { HotkeyRecorder(combo: $model.hotkey) }
             } footer: {
-                Text("Restart All and Force Quit All always ask first.")
+                Text("Restart All, Force Quit All and actions on macOS apps always ask first.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Show menu bar and background apps", isOn: $model.showBackground)
+                Picker("Show macOS apps", selection: $model.systemApps) {
+                    Text("Never").tag(SystemAppsMode.never)
+                    Text("When busy or not responding").tag(SystemAppsMode.whenBusy)
+                    Text("Always").tag(SystemAppsMode.always)
+                }
+                Stepper(value: $model.ramLimitGB, in: 0.25...32, step: 0.25) {
+                    Text("Busy when RAM is over **\(model.ramLimitGB.formatted(.number.precision(.fractionLength(0...2)))) GB**")
+                }
+                Stepper(value: $model.cpuLimit, in: 10...800, step: 10) {
+                    Text("or CPU is over **\(Int(model.cpuLimit))%**")
+                }
+            } header: {
+                Text("Apps in the list")
+            } footer: {
+                Text("Apps that came with macOS (Finder, Dock, Spotlight…) stay hidden until they pass a limit or stop responding. Pin one to always show it. Figures over a limit turn orange for every app.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Section("Keyboard (in the panel)") {
                 ShortcutRow(keys: "↑ ↓", action: "Move selection")
@@ -459,17 +484,17 @@ struct AutoRestartTab: View {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Accessibility access needed").font(.headline)
-                        Text("AppRestarter needs Accessibility access to tell when an app is not responding. Without it, the “Not Responding” badge and auto-restart are off.")
+                        Text("RestinPID needs Accessibility access to tell when an app is not responding. Without it, the “Not Responding” badge and auto-restart are off.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("Already switched on? Turn AppRestarter off and on again in that list, or restart AppRestarter.")
+                        Text("Already switched on? Turn RestinPID off and on again in that list, or restart RestinPID.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         HStack {
                             Button("Open Accessibility Settings…") { model.requestAccessibility() }
-                            Button("Restart AppRestarter") { relaunchSelf() }
+                            Button("Restart RestinPID") { relaunchSelf() }
                         }
                     }
                 }
@@ -600,4 +625,79 @@ private func appName(_ bundleID: String) -> String {
 
 private func appIcon(_ bundleID: String) -> NSImage {
     appURL(bundleID).map { NSWorkspace.shared.icon(forFile: $0.path) } ?? NSWorkspace.shared.icon(for: .application)
+}
+
+// MARK: - Feedback
+
+let repoURL = "https://github.com/prabeshbhetwal/RestinPID"
+
+/// Collects a bug report or idea, then opens a pre-filled GitHub issue (forms in .github/ISSUE_TEMPLATE).
+/// ponytail: no backend; GitHub Issues is the inbox. Add an email/web endpoint if non-GitHub users need one.
+struct FeedbackView: View {
+    enum Kind: String, CaseIterable { case bug = "Report a Problem", idea = "Suggest a Feature" }
+    @State private var kind = Kind.bug
+    @State private var title = ""
+    @State private var details = ""
+    @State private var includeSystem = true
+
+    var body: some View {
+        Form {
+            Picker("Type", selection: $kind) {
+                ForEach(Kind.allCases, id: \.self) { Text($0.rawValue) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            TextField("Title", text: $title, prompt: Text("One-line summary"))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(kind == .bug ? "What happened, and what did you expect?" : "What would you like, and why?")
+                    .font(.callout)
+                TextEditor(text: $details)
+                    .font(.body)
+                    .frame(minHeight: 140)
+                    .accessibilityLabel("Details")
+            }
+            Toggle(isOn: $includeSystem) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Include app and Mac versions")
+                    Text(systemInfo).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            HStack {
+                Link("See existing reports", destination: URL(string: "\(repoURL)/issues")!)
+                    .font(.callout)
+                Spacer()
+                Button("Continue on GitHub…", action: submit)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            Text("Opens a pre-filled issue in your browser; nothing is sent until you submit it there. Needs a free GitHub account.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .formStyle(.grouped)
+        .frame(width: 480)
+    }
+
+    private var systemInfo: String {
+        let info = Bundle.main.infoDictionary
+        let version = "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
+        #if arch(arm64)
+        let chip = "Apple silicon"
+        #else
+        let chip = "Intel"
+        #endif
+        return "RestinPID \(version) · macOS \(ProcessInfo.processInfo.operatingSystemVersionString) · \(chip)"
+    }
+
+    private func submit() {
+        var components = URLComponents(string: "\(repoURL)/issues/new")!
+        components.queryItems = [
+            URLQueryItem(name: "template", value: kind == .bug ? "bug.yml" : "idea.yml"),
+            URLQueryItem(name: "title", value: title),
+            URLQueryItem(name: "details", value: details), // field ids in the issue forms
+        ] + (includeSystem ? [URLQueryItem(name: "system", value: systemInfo)] : [])
+        if let url = components.url { NSWorkspace.shared.open(url) }
+        NSApp.keyWindow?.close()
+    }
 }

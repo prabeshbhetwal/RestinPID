@@ -1,0 +1,15 @@
+name: Suggest a feature
+description: An idea that would make RestinPID better.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: What would you like, and why?
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Versions
+      placeholder: RestinPID 3.0 (4) · macOS 15.1 · Apple silicon

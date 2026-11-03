@@ -23,5 +23,11 @@ import AppKit
   // Force quit only (no relaunch)
   if let c = te() { m.perform(.forceQuit, on: [c]); wait(3)
     print("5 force quit, no relaunch:", (te() == nil && !isAlive(c.id) && m.history.first?.action == "Force Quit") ? "PASS" : "FAIL") }
+  // Grouping: no nested helpers, never loginwindow, Finder counts as macOS
+  let paths = m.all.compactMap { $0.app.bundleURL?.path }
+  let finder = m.all.first { $0.bundleID == "com.apple.finder" }
+  let grouped = !paths.contains { $0.dropLast(4).contains(".app/") } && !m.all.contains { $0.bundleID == "com.apple.loginwindow" } && finder?.kind == .system
+  print("6 grouping:", grouped ? "PASS" : "FAIL", "apps \(m.all.filter { $0.kind == .app }.count), background \(m.all.filter { $0.kind == .background }.count), macOS \(m.all.filter { $0.kind == .system }.count) (\(m.visible.filter { $0.kind == .system }.count) shown)")
+  print("  background:", m.all.filter { $0.kind == .background }.map(\.name).sorted().joined(separator: ", "))
   d.removeObject(forKey: "watched")
 }}

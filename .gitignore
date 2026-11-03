@@ -1,5 +1,6 @@
 .build/
 .swiftpm/
+RestinPID.app/
 AppRestarter.app/
 releases/
 .DS_Store
