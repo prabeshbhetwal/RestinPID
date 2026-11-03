@@ -4,7 +4,8 @@ import UserNotifications
 
 struct AppItem: Identifiable {
     let app: NSRunningApplication
-    var memory: UInt64 = 0
+    var memory: UInt64 = 0   // RAM, bytes: app + its helper processes
+    var cpu: Double?         // % of one core, like Activity Monitor; nil until the second sample
     var frozen = false
 
     var id: pid_t { app.processIdentifier }
@@ -72,6 +73,7 @@ final class AppModel: ObservableObject {
     private var timer: Timer?
     private var polling = false
     private var frozenSince: [pid_t: Date] = [:]
+    private var lastCPU: [pid_t: (cpuNanos: UInt64, at: UInt64)] = [:]
 
     private init() {
         excluded = Set(defaults.stringArray(forKey: "excluded") ?? [])
@@ -95,6 +97,18 @@ final class AppModel: ObservableObject {
         }
         // Memory + frozen state + watchdog. ponytail: fixed 3 s poll; event-driven would need private APIs.
         timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in self?.pollStatus() }
+        // Re-check Accessibility the moment the user flips it in System Settings (macOS posts this
+        // when the trusted list changes; the value lags slightly), and whenever we come forward.
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.accessibility.api"), object: nil, queue: .main
+        ) { [weak self] _ in
+            for delay in [0.3, 1.0, 2.5] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { self?.refreshAccessibility() }
+            }
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.refreshAccessibility() }
         if notify { requestNotificationPermission() }
     }
 
@@ -133,20 +147,31 @@ final class AppModel: ObservableObject {
     private func pollStatus() {
         guard !polling else { return }
         polling = true
-        let pids = all.map(\.id)
+        let targets = all.map { ($0.id, $0.app.bundleURL?.path ?? "/nonexistent") }
+        let pids = targets.map(\.0)
         let trusted = AXIsProcessTrusted()
         DispatchQueue.global(qos: .utility).async {
-            let status = Dictionary(uniqueKeysWithValues: pids.map { pid in
-                (pid, (memory: memoryFootprint(pid), frozen: trusted && isUnresponsive(pid)))
+            let status = Dictionary(uniqueKeysWithValues: targets.map { pid, bundle in
+                (pid, (usage: treeUsage(pid, bundlePath: bundle), frozen: trusted && isUnresponsive(pid)))
             })
+            let now = monotonicNanos()
             DispatchQueue.main.async {
                 self.polling = false
                 self.accessibilityTrusted = trusted
                 self.all = self.all.map { item in
                     var item = item
-                    if let s = status[item.id] { item.memory = s.memory; item.frozen = s.frozen }
+                    guard let s = status[item.id] else { return item }
+                    item.memory = s.usage.memory
+                    item.frozen = s.frozen
+                    if let last = self.lastCPU[item.id], now > last.at {
+                        // ponytail: a helper exiting between samples drops its time; clamp at 0
+                        let used = s.usage.cpuNanos > last.cpuNanos ? s.usage.cpuNanos - last.cpuNanos : 0
+                        item.cpu = Double(used) / Double(now - last.at) * 100
+                    }
+                    self.lastCPU[item.id] = (s.usage.cpuNanos, now)
                     return item
                 }
+                self.lastCPU = self.lastCPU.filter { pid, _ in pids.contains(pid) }
                 self.runWatchdog()
             }
         }
@@ -253,9 +278,19 @@ final class AppModel: ObservableObject {
 
     // MARK: Permissions
 
+    /// Adds AppRestarter to the Accessibility list (first time) and opens that pane.
     func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         accessibilityTrusted = AXIsProcessTrustedWithOptions(options)
+        if !accessibilityTrusted,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func refreshAccessibility() {
+        let trusted = AXIsProcessTrusted()
+        if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
     }
 
     private func requestNotificationPermission() {
@@ -293,6 +328,15 @@ func relaunch(_ url: URL) -> Bool {
     return ok
 }
 
+/// Quits and reopens AppRestarter (picks up a newly granted permission).
+func relaunchSelf() {
+    let task = Process()
+    task.executableURL = URL(fileURLWithPath: "/bin/sh")
+    task.arguments = ["-c", "sleep 0.5; /usr/bin/open \"$0\"", Bundle.main.bundleURL.path]
+    try? task.run()
+    NSApp.terminate(nil)
+}
+
 func isAlive(_ pid: pid_t) -> Bool {
     kill(pid, 0) == 0 || errno == EPERM
 }
@@ -313,15 +357,58 @@ func isUnresponsive(_ pid: pid_t) -> Bool {
     return AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &value) == .cannotComplete
 }
 
-/// Physical memory of the main process. ponytail: helper processes (Electron, browsers) not summed.
-func memoryFootprint(_ pid: pid_t) -> UInt64 {
-    var info = rusage_info_v4()
-    let result = withUnsafeMutablePointer(to: &info) {
-        $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V4, $0) }
+/// RAM (same "Memory" figure as Activity Monitor) and total CPU time for an app plus the
+/// helper processes it spawned from inside its own bundle (browser tabs, Electron helpers).
+/// Tools it merely launches (shells, node servers) are skipped. ponytail: XPC services
+/// launched by launchd aren't children, so they're not counted.
+func treeUsage(_ root: pid_t, bundlePath: String) -> (memory: UInt64, cpuNanos: UInt64) {
+    var memory: UInt64 = 0, ticks: UInt64 = 0
+    var queue = [root], seen = Set<pid_t>()
+    let prefix = bundlePath.hasSuffix("/") ? bundlePath : bundlePath + "/"
+    while let pid = queue.popLast() {
+        guard seen.insert(pid).inserted else { continue }
+        queue += childPIDs(pid)
+        guard pid == root || executablePath(pid)?.hasPrefix(prefix) == true else { continue }
+        var info = rusage_info_v4()
+        let ok = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V4, $0) }
+        } == 0
+        if ok {
+            memory += info.ri_phys_footprint
+            ticks += info.ri_user_time + info.ri_system_time
+        }
     }
-    return result == 0 ? info.ri_phys_footprint : 0
+    return (memory, ticks * UInt64(timebase.numer) / UInt64(timebase.denom))
+}
+
+private func executablePath(_ pid: pid_t) -> String? {
+    var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN) * 4)
+    return proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 ? String(cString: buffer) : nil
+}
+
+private func childPIDs(_ pid: pid_t) -> [pid_t] {
+    let count = proc_listchildpids(pid, nil, 0)
+    guard count > 0 else { return [] }
+    var pids = [pid_t](repeating: 0, count: Int(count) + 16)
+    let found = proc_listchildpids(pid, &pids, Int32(pids.count * MemoryLayout<pid_t>.size))
+    return Array(pids.prefix(max(0, Int(found)))).filter { $0 > 0 }
+}
+
+/// rusage CPU times are mach ticks (not ns) on Apple silicon.
+private let timebase: mach_timebase_info_data_t = {
+    var info = mach_timebase_info_data_t()
+    mach_timebase_info(&info)
+    return info
+}()
+
+func monotonicNanos() -> UInt64 {
+    clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
 }
 
 func formatBytes(_ bytes: UInt64) -> String {
     ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .memory)
+}
+
+func formatCPU(_ percent: Double) -> String {
+    percent < 10 ? String(format: "%.1f%%", percent) : String(format: "%.0f%%", percent)
 }

@@ -33,8 +33,7 @@ struct PanelView: View {
                 .accessibilityLabel("Search running apps")
             if !model.query.isEmpty {
                 Button { model.query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.secondary)
+                    .buttonStyle(HoverIconStyle(tint: .primary))
                     .help("Clear search")
                     .accessibilityLabel("Clear search")
             }
@@ -50,6 +49,7 @@ struct PanelView: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
+            .modifier(HoverCircle(tint: .primary))
             .help("Settings, updates and more")
             .accessibilityLabel("More options")
         }
@@ -94,18 +94,22 @@ struct PanelView: View {
     }
 
     private func footer(_ items: [AppItem]) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 4) {
             Button { model.perform(.restart, on: items) } label: { Label("Restart All", systemImage: "arrow.clockwise") }
+                .buttonStyle(HoverPillStyle(tint: .accentColor))
                 .help("Restart every app in the list")
+                .disabled(items.isEmpty)
             Button { model.perform(.forceQuit, on: items) } label: { Label("Force Quit All", systemImage: "xmark.octagon") }
+                .buttonStyle(HoverPillStyle(tint: .red))
                 .help("Force quit every app in the list")
+                .disabled(items.isEmpty)
             Spacer()
+            Button { NSApp.terminate(nil) } label: { Label("Quit", systemImage: "power") }
+                .buttonStyle(HoverPillStyle(tint: .primary))
+                .help("Quit AppRestarter (⌘Q)")
         }
-        .buttonStyle(.borderless)
-        .controlSize(.small)
-        .disabled(items.isEmpty)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
     }
 }
 
@@ -147,12 +151,7 @@ private struct AppRow: View {
                             .help("Restarts automatically when frozen")
                     }
                 }
-                if model.showMemory, item.memory > 0 {
-                    Text(formatBytes(item.memory))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
+                if model.showMemory, item.memory > 0 { usage }
             }
             Spacer(minLength: 4)
             if item.frozen {
@@ -166,8 +165,8 @@ private struct AppRow: View {
             if busy {
                 ProgressView().controlSize(.small)
             } else if hovering || selected {
-                RowButton(symbol: "arrow.clockwise", label: "Restart") { model.perform(.restart, on: [item]) }
-                RowButton(symbol: "xmark.octagon", label: "Force Quit") { model.perform(.forceQuit, on: [item]) }
+                RowButton(symbol: "arrow.clockwise", label: "Restart", tint: .accentColor) { model.perform(.restart, on: [item]) }
+                RowButton(symbol: "xmark.octagon", label: "Force Quit", tint: .red) { model.perform(.forceQuit, on: [item]) }
             } else if isPinned {
                 Image(systemName: "pin.fill").font(.caption).foregroundStyle(.secondary)
             }
@@ -207,9 +206,27 @@ private struct AppRow: View {
         .accessibilityAction(named: "Exclude from List") { model.excluded.insert(item.bundleID) }
     }
 
+    /// "RAM 515 MB · CPU 2.3%". CPU turns orange above one full core.
+    private var usage: some View {
+        HStack(spacing: 6) {
+            Text("RAM \(formatBytes(item.memory))")
+            if let cpu = item.cpu {
+                Text("·").foregroundStyle(.tertiary)
+                Text("CPU \(formatCPU(cpu))").foregroundStyle(cpu >= 100 ? Color.orange : Color.secondary)
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .monospacedDigit()
+        .help("RAM: memory used by the app and its helper processes.\nCPU: processor use, where 100% is one full core (same as Activity Monitor).")
+    }
+
     private var accessibilityText: String {
         var parts = [item.name]
-        if model.showMemory, item.memory > 0 { parts.append(formatBytes(item.memory)) }
+        if model.showMemory, item.memory > 0 {
+            parts.append("RAM \(formatBytes(item.memory))")
+            if let cpu = item.cpu { parts.append("CPU \(formatCPU(cpu))") }
+        }
         if item.frozen { parts.append("Not responding") }
         if isPinned { parts.append("Pinned") }
         if busy { parts.append("Working") }
@@ -220,12 +237,74 @@ private struct AppRow: View {
 private struct RowButton: View {
     let symbol: String
     let label: String
+    let tint: Color
     let action: () -> Void
     var body: some View {
-        Button(action: action) { Image(systemName: symbol).frame(width: 20, height: 20) }
-            .buttonStyle(.borderless)
+        Button(action: action) { Image(systemName: symbol) }
+            .buttonStyle(HoverIconStyle(tint: tint))
             .help(label)
             .accessibilityLabel(label)
+    }
+}
+
+// MARK: - Hover styles
+
+/// Round icon button: grey at rest; tinted icon on a soft circle when hovered; shrinks when pressed.
+struct HoverIconStyle: ButtonStyle {
+    var tint: Color
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .medium))
+            .modifier(HoverCircle(tint: tint, pressed: configuration.isPressed))
+    }
+}
+
+struct HoverCircle: ViewModifier {
+    var tint: Color
+    var pressed = false
+    @State private var hovering = false
+    @Environment(\.isEnabled) private var enabled
+
+    func body(content: Content) -> some View {
+        let active = hovering && enabled
+        content
+            .foregroundStyle(active ? tint : Color.secondary)
+            .frame(width: 26, height: 26)
+            .background(Circle().fill(tint.opacity(active ? (pressed ? 0.28 : 0.14) : 0)))
+            .scaleEffect(pressed ? 0.88 : 1)
+            .contentShape(Circle())
+            .onHover { hovering = $0 }
+            .animation(.easeOut(duration: 0.12), value: active)
+            .animation(.easeOut(duration: 0.08), value: pressed)
+    }
+}
+
+/// Text + icon footer button: tinted capsule on hover.
+struct HoverPillStyle: ButtonStyle {
+    var tint: Color
+    func makeBody(configuration: Configuration) -> some View {
+        Pill(configuration: configuration, tint: tint)
+    }
+
+    private struct Pill: View {
+        let configuration: Configuration
+        let tint: Color
+        @State private var hovering = false
+        @Environment(\.isEnabled) private var enabled
+
+        var body: some View {
+            let active = hovering && enabled
+            configuration.label
+                .font(.callout)
+                .foregroundStyle(active ? tint : enabled ? Color.secondary : Color.secondary.opacity(0.5))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(tint.opacity(active ? (configuration.isPressed ? 0.25 : 0.12) : 0)))
+                .scaleEffect(configuration.isPressed ? 0.96 : 1)
+                .contentShape(Capsule())
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: active)
+        }
     }
 }
 
@@ -272,7 +351,7 @@ struct GeneralTab: View {
             Section {
                 Toggle("Launch AppRestarter at login", isOn: $model.launchAtLogin)
                 Toggle("Ask before restarting or force quitting an app", isOn: $model.confirmActions)
-                Toggle("Show memory use", isOn: $model.showMemory)
+                Toggle("Show RAM and CPU use", isOn: $model.showMemory)
                 Toggle("Notify after each restart or force quit", isOn: $model.notify)
                 LabeledContent("Open panel shortcut") { HotkeyRecorder(combo: $model.hotkey) }
             } footer: {
@@ -384,7 +463,14 @@ struct AutoRestartTab: View {
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
-                        Button("Grant Access…") { model.requestAccessibility() }
+                        Text("Already switched on? Turn AppRestarter off and on again in that list, or restart AppRestarter.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            Button("Open Accessibility Settings…") { model.requestAccessibility() }
+                            Button("Restart AppRestarter") { relaunchSelf() }
+                        }
                     }
                 }
                 .padding(10)

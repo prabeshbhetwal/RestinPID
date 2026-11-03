@@ -20,10 +20,17 @@ cp Info.plist "$STAGE/Contents/Info.plist"
 cp AppIcon.icns "$STAGE/Contents/Resources/AppIcon.icns"
 ditto "$BIN/Sparkle.framework" "$STAGE/Contents/Frameworks/Sparkle.framework"
 
-mkdir -p AppRestarter.app
-rsync -a --delete "$STAGE/" AppRestarter.app/
+# Sign + verify in the temp folder: the Desktop re-adds Finder attributes that break signatures.
+# A stable identity keeps users' Accessibility permission across updates (ad-hoc changes every build).
+# Override with SIGN_IDENTITY="Developer ID Application: …" once enrolled; falls back to ad-hoc.
+xattr -cr "$STAGE"
+IDENTITY="${SIGN_IDENTITY:-AppRestarter Code Signing}"
+security find-identity -p codesigning | grep -q "$IDENTITY" || { echo "warning: '$IDENTITY' not found, signing ad-hoc"; IDENTITY=-; }
+codesign --force --deep --sign "$IDENTITY" "$STAGE"
+codesign --verify --deep --strict "$STAGE"
 
-xattr -cr AppRestarter.app # Desktop/iCloud attributes break codesign; sign in place after copying
-codesign --force --deep --sign - AppRestarter.app
-codesign --verify --deep --strict AppRestarter.app
-echo "Built $PWD/AppRestarter.app"
+# OUT=<dir> puts the app elsewhere (release.sh zips from a clean temp copy).
+OUT="${OUT:-.}"
+mkdir -p "$OUT/AppRestarter.app"
+rsync -a --delete "$STAGE/" "$OUT/AppRestarter.app/"
+echo "Built $(cd "$OUT" && pwd)/AppRestarter.app"

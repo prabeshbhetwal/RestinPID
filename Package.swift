@@ -13,7 +13,7 @@ let package = Package(
             dependencies: [.product(name: "Sparkle", package: "Sparkle")],
             path: ".",
             exclude: ["AppRestarter.app", "releases", "AppIcon.icns", "Info.plist", "make-icon.swift",
-                      "build.sh", "release.sh", "appcast.xml", "selftest"],
+                      "build.sh", "release.sh", "appcast.xml", "selftest", "README.md", "screenshots"],
             sources: ["AppRestarter.swift", "Model.swift", "Views.swift", "Hotkey.swift"],
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),

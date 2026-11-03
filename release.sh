@@ -6,10 +6,12 @@
 #   3. Commit + push appcast.xml to main (SUFeedURL points at it)
 set -e
 cd "$(dirname "$0")"
-./build.sh
+OUT="$(mktemp -d)"
+OUT="$OUT" ./build.sh
+codesign --verify --deep --strict "$OUT/AppRestarter.app"
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Info.plist)
 mkdir -p releases
-ditto -c -k --keepParent AppRestarter.app "releases/AppRestarter-$VERSION.zip"
+ditto -c -k --keepParent "$OUT/AppRestarter.app" "releases/AppRestarter-$VERSION.zip"
 .build/artifacts/sparkle/Sparkle/bin/generate_appcast \
   --download-url-prefix "https://github.com/prabeshbhetwal/AppRestarter/releases/download/v$VERSION/" \
   -o appcast.xml releases
