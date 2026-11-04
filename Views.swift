@@ -428,6 +428,16 @@ struct GeneralTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Section {
+                Toggle("Jiggle the menu bar icon when an app stops responding", isOn: $model.jiggleIcon)
+            } header: {
+                Text("Alerts")
+            } footer: {
+                Text("The icon turns red whenever an app isn’t responding. With this on, it also shakes every few seconds until you open the panel. If Reduce Motion is on in System Settings, it stays still.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Section("Keyboard (in the panel)") {
                 ShortcutRow(keys: "↑ ↓", action: "Move selection")
                 ShortcutRow(keys: "↩", action: "Restart selected app")
@@ -832,6 +842,16 @@ private struct HotkeyRecorder: View {
 }
 
 // MARK: - Helpers
+
+/// A short side-to-side shake, like a Dock icon asking for attention. Skipped with Reduce Motion.
+func jiggle(_ view: NSView) {
+    guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+    view.wantsLayer = true
+    let shake = CAKeyframeAnimation(keyPath: "transform.translation.x")
+    shake.values = [0, -4, 4, -4, 4, -3, 3, -1.5, 1.5, 0]
+    shake.duration = 0.6
+    view.layer?.add(shake, forKey: "jiggle")
+}
 /// SF Symbol with a dot cut into its top-right corner; stays a template so it matches the menu bar.
 func badgedSymbol(_ name: String, label: String) -> NSImage? {
     guard let base = NSImage(systemSymbolName: name, accessibilityDescription: label) else { return nil }

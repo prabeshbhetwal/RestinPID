@@ -88,6 +88,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var ownMemory: UInt64 = 0
     @Published private(set) var ownCPU: Double?
     @Published var selfHeal: Bool { didSet { defaults.set(selfHeal, forKey: "selfHeal") } }
+    @Published var jiggleIcon: Bool { didSet { defaults.set(jiggleIcon, forKey: "jiggleIcon") } }
     @Published var attentionOnTop: Bool { didSet { defaults.set(attentionOnTop, forKey: "attentionOnTop") } }
     @Published var busyMatch: BusyMatch { didSet { defaults.set(busyMatch.rawValue, forKey: "busyMatch") } }
     /// Hide your own apps (Dock and background) unless they're busy, frozen or pinned.
@@ -149,6 +150,7 @@ final class AppModel: ObservableObject {
         appearance = AppearanceMode(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         selfHeal = defaults.object(forKey: "selfHeal") as? Bool ?? true
         attentionOnTop = defaults.object(forKey: "attentionOnTop") as? Bool ?? true
+        jiggleIcon = defaults.object(forKey: "jiggleIcon") as? Bool ?? true
         busyMatch = BusyMatch(rawValue: defaults.string(forKey: "busyMatch") ?? "") ?? .either
         hideQuietApps = defaults.object(forKey: "hideQuietApps") as? Bool ?? false
         panelTotals = UsageScope(rawValue: defaults.string(forKey: "panelTotals") ?? "") ?? .listed

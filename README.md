@@ -18,6 +18,8 @@ Click the RestinPID icon in the menu bar, or press **⌃⌥R**. A panel lists th
 
 Each app shows its **RAM** and **CPU** use, measured the way Activity Monitor measures them, helper processes included. A figure turns orange when it goes over your limit. A red **Not Responding** badge marks frozen apps.
 
+When an app stops responding, the menu bar icon turns red and jiggles every few seconds until you open the panel, like a Dock icon asking for attention. You can turn the jiggle off in Settings → General.
+
 Click an app to restart it, or use its two buttons:
 
 - **Restart** quits the app, even a frozen one, and opens it again.
