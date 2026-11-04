@@ -44,6 +44,16 @@ import AppKit
     print("13 hide quiet apps:", hidden && shown ? "PASS" : "FAIL", "quiet hidden=\(hidden), busy shown=\(shown)")
     m.hideQuietApps = false; m.ramLimitGB = 1; m.cpuLimit = 50
   }
+  // Quick hide: timed hide and Show again; until-restart hide ends when the app restarts
+  if let x = te() {
+    m.hide(x, .minutes(15)); let timed = !m.isShown(x)
+    m.showAgain(x.bundleID); let back = m.isShown(x)
+    print("15 hide for a while, show again:", timed && back ? "PASS" : "FAIL")
+    m.hide(x, .untilRestart); let hidden = !m.isShown(x)
+    m.perform(.restart, on: [x]); wait(6)
+    let y = te(); let after = y.map { $0.id != x.id && m.isShown($0) } ?? false
+    print("16 hide until restart:", hidden && after && m.hiddenRun.isEmpty ? "PASS" : "FAIL", "hidden=\(hidden) shownAfterRestart=\(after)")
+  }
   // Force quit only (no relaunch)
   if let c = te() { m.perform(.forceQuit, on: [c]); wait(3)
     print("5 force quit, no relaunch:", (te() == nil && !isAlive(c.id) && m.history.first?.action == "Force Quit") ? "PASS" : "FAIL") }

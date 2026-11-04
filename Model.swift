@@ -31,6 +31,14 @@ enum BusyMatch: String, CaseIterable {
     case either, both // either limit passed / both passed at once
 }
 
+/// Ways to hide an app from the list.
+enum HideOption: Hashable {
+    case minutes(Int)   // for a while
+    case untilTomorrow  // until midnight
+    case untilRestart   // while this run of the app lasts
+    case always         // the Excluded list
+}
+
 /// When apps that ship with macOS appear in the list.
 enum SystemAppsMode: String, CaseIterable {
     case never, whenBusy, always
@@ -88,6 +96,13 @@ final class AppModel: ObservableObject {
     @Published private(set) var ownMemory: UInt64 = 0
     @Published private(set) var ownCPU: Double?
     @Published var selfHeal: Bool { didSet { defaults.set(selfHeal, forKey: "selfHeal") } }
+    /// Temporary hides: bundle ID -> until when; bundle ID -> the process to hide (until the app restarts).
+    @Published private(set) var hiddenUntil: [String: Date] {
+        didSet { defaults.set(hiddenUntil.mapValues(\.timeIntervalSince1970), forKey: "hiddenUntil") }
+    }
+    @Published private(set) var hiddenRun: [String: pid_t] {
+        didSet { defaults.set(hiddenRun.mapValues(Int.init), forKey: "hiddenRun") }
+    }
     @Published var jiggleIcon: Bool { didSet { defaults.set(jiggleIcon, forKey: "jiggleIcon") } }
     @Published var attentionOnTop: Bool { didSet { defaults.set(attentionOnTop, forKey: "attentionOnTop") } }
     @Published var busyMatch: BusyMatch { didSet { defaults.set(busyMatch.rawValue, forKey: "busyMatch") } }
@@ -151,6 +166,8 @@ final class AppModel: ObservableObject {
         selfHeal = defaults.object(forKey: "selfHeal") as? Bool ?? true
         attentionOnTop = defaults.object(forKey: "attentionOnTop") as? Bool ?? true
         jiggleIcon = defaults.object(forKey: "jiggleIcon") as? Bool ?? true
+        hiddenUntil = (defaults.dictionary(forKey: "hiddenUntil") as? [String: Double] ?? [:]).mapValues { Date(timeIntervalSince1970: $0) }
+        hiddenRun = (defaults.dictionary(forKey: "hiddenRun") as? [String: Int] ?? [:]).mapValues { pid_t($0) }
         busyMatch = BusyMatch(rawValue: defaults.string(forKey: "busyMatch") ?? "") ?? .either
         hideQuietApps = defaults.object(forKey: "hideQuietApps") as? Bool ?? false
         panelTotals = UsageScope(rawValue: defaults.string(forKey: "panelTotals") ?? "") ?? .listed
@@ -301,6 +318,7 @@ final class AppModel: ObservableObject {
     }
 
     func isShown(_ item: AppItem) -> Bool {
+        if isHiddenForNow(item) { return false }
         if pinned.contains(item.bundleID) { return true }
         let active = item.frozen || wasBusyRecently(item)
         switch item.kind {
@@ -421,6 +439,7 @@ final class AppModel: ObservableObject {
                 self.axAnswered.formIntersection(pids)
                 self.axSilent.formIntersection(pids)
                 self.axMisses = self.axMisses.filter { pids.contains($0.key) }
+                self.pruneHides()
                 if self.selection == nil || !self.visible.contains(where: { $0.id == self.selection }) {
                     self.selection = self.visible.first?.id
                 }
@@ -520,6 +539,34 @@ final class AppModel: ObservableObject {
             return false
         }
         return true
+    }
+
+    // MARK: Hiding
+
+    func isHiddenForNow(_ item: AppItem) -> Bool {
+        (hiddenUntil[item.bundleID].map { $0 > Date() } ?? false) || hiddenRun[item.bundleID] == item.id
+    }
+
+    func hide(_ item: AppItem, _ option: HideOption) {
+        switch option {
+        case .minutes(let m): hiddenUntil[item.bundleID] = Date().addingTimeInterval(TimeInterval(m * 60))
+        case .untilTomorrow: hiddenUntil[item.bundleID] = Calendar.current.startOfDay(for: Date().addingTimeInterval(86_400))
+        case .untilRestart: hiddenRun[item.bundleID] = item.id
+        case .always: excluded.insert(item.bundleID)
+        }
+        if selection == item.id { selection = visible.first?.id }
+    }
+
+    func showAgain(_ bundleID: String) {
+        hiddenUntil[bundleID] = nil
+        hiddenRun[bundleID] = nil
+    }
+
+    /// Drop timed hides that ran out and run hides whose process has quit.
+    private func pruneHides() {
+        let now = Date(), running = Set(all.map(\.id))
+        if hiddenUntil.contains(where: { $0.value <= now }) { hiddenUntil = hiddenUntil.filter { $0.value > now } }
+        if !all.isEmpty, hiddenRun.contains(where: { !running.contains($0.value) }) { hiddenRun = hiddenRun.filter { running.contains($0.value) } }
     }
 
     func togglePin(_ id: String) {

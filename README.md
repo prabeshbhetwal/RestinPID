@@ -20,10 +20,11 @@ Each app shows its **RAM** and **CPU** use, measured the way Activity Monitor me
 
 When an app stops responding, the menu bar icon turns red and jiggles every few seconds until you open the panel, like a Dock icon asking for attention. You can turn the jiggle off in Settings → General.
 
-Click an app to restart it, or use its two buttons:
+Click an app to restart it, or use its buttons:
 
 - **Restart** quits the app, even a frozen one, and opens it again.
 - **Force Quit** quits the app without reopening it.
+- **Hide** (eye-slash) takes the app out of the list for a while, until it restarts, or for good.
 
 **Restart All** and **Force Quit All** act on every app in the list at once, except macOS apps. They always ask first.
 
@@ -35,6 +36,7 @@ To restart RestinPID itself, click **⟳** next to the gear at the top of the pa
 - **Restarts itself:** if RestinPID ever freezes or slows down, it restarts itself. You can turn this off.
 - **Hide quiet apps:** show only apps that are busy, meaning over your RAM limit **or** CPU limit, or over **both** at once. You choose which.
 - **Search and pins:** type to filter the list, and pin the apps you use most to the top. Pin a macOS app to always see it.
+- **Quick hide:** the eye-slash button on a row hides that app for 15 minutes, 1 hour, 4 hours, until tomorrow, until the app restarts, or always. Temporary hides are listed in Settings → Excluded, with a Show button.
 - **Exclude list:** hide apps you never want to see or touch.
 - **History:** a log of every restart and force quit, automatic ones included.
 - **Notifications:** an optional notice after each restart or force quit.

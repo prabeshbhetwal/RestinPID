@@ -224,6 +224,10 @@ private struct AppRow: View {
             } else if hovering || selected {
                 RowButton(symbol: "arrow.clockwise", label: "Restart", tint: .accentColor) { model.perform(.restart, on: [item]) }
                 RowButton(symbol: "xmark.octagon", label: "Force Quit", tint: .red) { model.perform(.forceQuit, on: [item]) }
+                // A plain button (same look as its neighbours) that pops up the hide choices.
+                RowButton(symbol: "eye.slash", label: "Hide from the list: for a while, until it restarts, or always", tint: .orange) {
+                    popUpHideMenu(model: model, item: item)
+                }
             } else if isPinned {
                 Image(systemName: "pin.fill").font(.caption).foregroundStyle(.secondary)
             }
@@ -246,7 +250,7 @@ private struct AppRow: View {
             Divider()
             Button(isPinned ? "Unpin" : "Pin to Top") { model.togglePin(item.bundleID) }
             Button(isWatched ? "Stop Auto-Restarting When Frozen" : "Auto-Restart When Frozen") { model.toggleWatch(item.bundleID) }
-            Button("Exclude from List") { model.excluded.insert(item.bundleID) }
+            Menu("Hide") { HideMenu(model: model, item: item) }
             Divider()
             if let url = item.app.bundleURL {
                 Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
@@ -260,7 +264,8 @@ private struct AppRow: View {
         .accessibilityAction { model.perform(.restart, on: [item]) }
         .accessibilityAction(named: "Force Quit") { model.perform(.forceQuit, on: [item]) }
         .accessibilityAction(named: isPinned ? "Unpin" : "Pin to Top") { model.togglePin(item.bundleID) }
-        .accessibilityAction(named: "Exclude from List") { model.excluded.insert(item.bundleID) }
+        .accessibilityAction(named: "Hide until it restarts") { model.hide(item, .untilRestart) }
+        .accessibilityAction(named: "Always hide") { model.hide(item, .always) }
     }
 
     /// "RAM 515 MB · CPU 2.3%". Each turns orange above the high-use limit in Settings.
@@ -288,6 +293,51 @@ private struct AppRow: View {
         if isPinned { parts.append("Pinned") }
         if busy { parts.append("Working") }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// The eye-slash button's pop-up: same choices as the right-click Hide menu.
+private func popUpHideMenu(model: AppModel, item: AppItem) {
+    let menu = NSMenu()
+    let header = NSMenuItem(title: "Hide \(item.name)", action: nil, keyEquivalent: "") // sectionHeader needs macOS 14
+    header.isEnabled = false
+    menu.addItem(header)
+    let choices: [(String, HideOption)] = [
+        ("For 15 Minutes", .minutes(15)), ("For 1 Hour", .minutes(60)), ("For 4 Hours", .minutes(240)),
+        ("Until Tomorrow", .untilTomorrow), ("Until It Restarts", .untilRestart),
+    ]
+    for (title, option) in choices { menu.addItem(ClosureMenuItem(title) { model.hide(item, option) }) }
+    menu.addItem(.separator())
+    menu.addItem(ClosureMenuItem("Always (Add to Excluded)") { model.hide(item, .always) })
+    menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+}
+
+/// NSMenuItem that runs a closure.
+private final class ClosureMenuItem: NSMenuItem {
+    private let run: () -> Void
+    init(_ title: String, _ run: @escaping () -> Void) {
+        self.run = run
+        super.init(title: title, action: #selector(fire), keyEquivalent: "")
+        target = self
+    }
+    required init(coder: NSCoder) { fatalError("not used") }
+    @objc private func fire() { run() }
+}
+
+/// Shared by the row's eye-slash button and its right-click menu.
+private struct HideMenu: View {
+    let model: AppModel
+    let item: AppItem
+    var body: some View {
+        Section("Hide \(item.name)") {
+            Button("For 15 Minutes") { model.hide(item, .minutes(15)) }
+            Button("For 1 Hour") { model.hide(item, .minutes(60)) }
+            Button("For 4 Hours") { model.hide(item, .minutes(240)) }
+            Button("Until Tomorrow") { model.hide(item, .untilTomorrow) }
+            Button("Until It Restarts") { model.hide(item, .untilRestart) }
+        }
+        Divider()
+        Button("Always (Add to Excluded)") { model.hide(item, .always) }
     }
 }
 
@@ -394,11 +444,44 @@ func makeSettingsController(model: AppModel, updater: SPUUpdater) -> NSTabViewCo
 
 struct ExcludedTab: View {
     @ObservedObject var model: AppModel
+
+    /// Temporary hides, soonest first; "until it restarts" last.
+    private var temporary: [(id: String, until: String)] {
+        let fmt = Date.FormatStyle(date: .omitted, time: .shortened)
+        let timed = model.hiddenUntil.filter { $0.value > Date() }.sorted { $0.value < $1.value }.map { id, date in
+            let cal = Calendar.current
+            let text = cal.isDateInToday(date) ? "Until \(date.formatted(fmt))"
+                : date == cal.startOfDay(for: date) && cal.isDateInTomorrow(date) ? "Until tomorrow"
+                : "Until \(date.formatted(.dateTime.weekday(.wide).hour().minute()))"
+            return (id, text)
+        }
+        let runs = model.hiddenRun.keys.sorted().filter { model.hiddenUntil[$0] == nil }.map { ($0, "Until it restarts") }
+        return timed + runs
+    }
+
     var body: some View {
-        AppListTab(
-            model: model, apps: $model.excluded,
-            caption: "Excluded apps never appear in the list and are skipped by Restart All and Force Quit All."
-        )
+        VStack(alignment: .leading, spacing: 12) {
+            if !temporary.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Hidden for now").font(.headline)
+                    ForEach(temporary, id: \.id) { entry in
+                        HStack(spacing: 8) {
+                            Image(nsImage: appIcon(entry.id)).resizable().frame(width: 20, height: 20)
+                            Text(appName(entry.id))
+                            Spacer()
+                            Text(entry.until).font(.caption).foregroundStyle(.secondary)
+                            Button("Show") { model.showAgain(entry.id) }
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                Divider()
+            }
+            AppListTab(
+                model: model, apps: $model.excluded,
+                caption: "Always hidden: these apps never appear in the list and are skipped by Restart All and Force Quit All. To hide an app for a while instead, use the eye-slash button on its row."
+            )
+        }
     }
 }
 
