@@ -3,29 +3,28 @@
     <channel>
         <title>RestinPID</title>
         <item>
-            <title>3.4</title>
-            <pubDate>Wed, 04 Nov 2026 12:41:51 +1100</pubDate>
+            <title>3.5</title>
+            <pubDate>Wed, 04 Nov 2026 13:29:30 +1100</pubDate>
             <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
             <sparkle:informationalUpdate>
                 <sparkle:belowVersion>4</sparkle:belowVersion>
             </sparkle:informationalUpdate>
-            <sparkle:version>8</sparkle:version>
-            <sparkle:shortVersionString>3.4</sparkle:shortVersionString>
+            <sparkle:version>9</sparkle:version>
+            <sparkle:shortVersionString>3.5</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RestinPID 3.4</h2>
+            <description><![CDATA[<h2>RestinPID 3.5</h2>
 <ul>
-<li><b>Needs Attention:</b> apps that aren’t responding, and busy macOS apps, now gather in one group at the top of the list so you see them first. Prefer them at the bottom? Settings → Apps.</li>
-<li><b>Cleaner rows:</b> the “Not Responding” badge sits next to the app’s name, and RAM and CPU always stay on one line.</li>
-<li><b>Fewer false alarms:</b> an app is marked “Not Responding” only after it misses two checks in a row, so a single slow moment no longer flags it.</li>
-<li>The arrow keys move through the list in the order you see it.</li>
+<li><b>Hard to miss:</b> when an app stops responding, the menu bar icon turns red. It also jiggles every few seconds until you open the panel, like a Dock icon asking for attention.</li>
+<li>Turn the jiggle off in Settings → General → Alerts. If Reduce Motion is on in System Settings, the icon stays still and just turns red.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID-3.4.zip" length="1999815" type="application/octet-stream" sparkle:edSignature="0Mq/XmpagRTQm9BQE8KJVmWGK+5yxtlS4A9moed1kaCpZyLBfC/I8D6CrEormYnirz3Do233KDy8bBbKR3vaCw=="/>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID-3.5.zip" length="2011556" type="application/octet-stream" sparkle:edSignature="/Dcqt7bWyfjCdlyaY8/r4xDS7N+0yVvHIzn9piYqNeB0Dnth4fUAdXq2fT78TXwEZByG5ZEzmbPXga/tFZ/1Dw=="/>
             <sparkle:deltas>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID8-7.delta" sparkle:deltaFrom="7" length="161318" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="wmtkIhLU4wWs7SDhLZ/jUA6JBdzS0qXKQx+Nf++mhbiu1x/PylpVG+AZ5ArZM48nAmLFn/ai5vNXRYePPfYOBA=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID8-6.delta" sparkle:deltaFrom="6" length="258970" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="v6yO9Ng3mTOnciouSe832F5KdHS5lJKsuWNkhmOoscdFT/0bd0Yf0s1fV+Mx8g2bTKCmvNIrLBh+ZfWAAls6BA=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID8-5.delta" sparkle:deltaFrom="5" length="286418" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="SsVt3uD5z97qNEio5e5mhJ4u3drbxUvQSWtLPaxABW2dJUcw/qGcDvjHCmQA0OcoQlgBzsqTEgzxjML7Jn6iBg=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID8-4.delta" sparkle:deltaFrom="4" length="325050" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="V4yAsQQaD4LYa02u7EpNlaKSHyrpAfBAc9epc/ZRXldhxc9Vg+5QsO13s6Bv3QUbr23F0tOtJI6PJgxal5g+AA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-8.delta" sparkle:deltaFrom="8" length="146370" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="3ayE+REfFZmUgPTCJ/bwWefGXbSfDmqJ+/UWCDXkF0JkdytCZypJkkDQ542+w5XGoyr5NhVogbhOw5vF8phVDw=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-7.delta" sparkle:deltaFrom="7" length="192658" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Uj6r4pd/oq+8EEji5s2sLNxRMdbn1YWWAlJElrmll68NDBzm5+CtOWeF2Nqmpu2erJ1OhD5ngVMhL4W4HW8iCw=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-6.delta" sparkle:deltaFrom="6" length="273914" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hR/HiJBSqxjymKTMgtA7wMLVpk0iixz9JmaHTQ6uzPDzaZZoedMKsDJFv+Xynnm8h966NstwFTU51E1RhZnMBQ=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-5.delta" sparkle:deltaFrom="5" length="300486" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BccvnceAuy93CQn7mjbqZGiq4AU+mQ7CtV+gE5D3obI2YJ3h+6XXH+Ko3ZCjSfsvAUT5LNKiiXOv5ql9AmkACQ=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-4.delta" sparkle:deltaFrom="4" length="333486" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="1SEADDBpY5GIzQxIbcbDl/CwquuFqmJPFpU4ykcNuvLSdGJvn/uNCeZG2+SpIB82hTEZa0pV+eIEMyqdQwYkDA=="/>
             </sparkle:deltas>
         </item>
     </channel>
