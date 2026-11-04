@@ -3,29 +3,29 @@
     <channel>
         <title>RestinPID</title>
         <item>
-            <title>3.3</title>
-            <pubDate>Wed, 04 Nov 2026 02:29:02 +1100</pubDate>
+            <title>3.4</title>
+            <pubDate>Wed, 04 Nov 2026 12:41:51 +1100</pubDate>
             <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
             <sparkle:informationalUpdate>
                 <sparkle:belowVersion>4</sparkle:belowVersion>
             </sparkle:informationalUpdate>
-            <sparkle:version>7</sparkle:version>
-            <sparkle:shortVersionString>3.3</sparkle:shortVersionString>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>3.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RestinPID 3.3</h2>
+            <description><![CDATA[<h2>RestinPID 3.4</h2>
 <ul>
-<li><b>Totals at a glance:</b> each group heading shows its total RAM and CPU. Or choose <i>Whole Mac</i> to see memory used and CPU load as Activity Monitor shows them. Settings → Usage.</li>
-<li><b>Menu bar reading:</b> optionally show RAM and CPU next to the menu bar icon, either for the apps in the list or for the whole Mac. Settings → Usage.</li>
-<li><b>Hide quiet apps:</b> show only busy apps. You decide what busy means: over your RAM limit <b>or</b> your CPU limit, or over <b>both</b> at once. Settings → Apps.</li>
-<li><b>Restart RestinPID</b> with the new button next to the gear.</li>
-<li><b>Tidier Settings:</b> new Apps and Usage tabs, and self-restart has moved to Auto-Restart.</li>
+<li><b>Needs Attention:</b> apps that aren’t responding, and busy macOS apps, now gather in one group at the top of the list so you see them first. Prefer them at the bottom? Settings → Apps.</li>
+<li><b>Cleaner rows:</b> the “Not Responding” badge sits next to the app’s name, and RAM and CPU always stay on one line.</li>
+<li><b>Fewer false alarms:</b> an app is marked “Not Responding” only after it misses two checks in a row, so a single slow moment no longer flags it.</li>
+<li>The arrow keys move through the list in the order you see it.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.3/RestinPID-3.3.zip" length="1983776" type="application/octet-stream" sparkle:edSignature="6KNNn1Cco70jr0gNVQMk9vHep53QpqlAbSDwC66KBoPGcLqGap+TiAE16QssQo2Q1PhbYcCAC5J42ZCL3f/uBQ=="/>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID-3.4.zip" length="1999815" type="application/octet-stream" sparkle:edSignature="0Mq/XmpagRTQm9BQE8KJVmWGK+5yxtlS4A9moed1kaCpZyLBfC/I8D6CrEormYnirz3Do233KDy8bBbKR3vaCw=="/>
             <sparkle:deltas>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.3/RestinPID7-6.delta" sparkle:deltaFrom="6" length="230374" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="dNTV79bPATvxmeX1mt3rmpKxWCYlDZmHVgR8z1hVR/zb+UriAXdrsovQ84g0d6zwhrzpmR24CqthM+g0GLhDAw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.3/RestinPID7-5.delta" sparkle:deltaFrom="5" length="260898" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="jFDvDNot/x7/HzM5KuIlMp+ZlDPRgdLDsyKEYASdr+mdLDYXv0spmgVwIiEkUbiKAmXtAWEUAtpMr6bx85hqAA=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.3/RestinPID7-4.delta" sparkle:deltaFrom="4" length="296450" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="UwSMHSkIWlJTlS1+OjUc+K67vd8Id6e/3NAoqgmU9HkbmkW51NKdVPuy3nWCHnrd0l8ggajQKpRvXbtU4NeNDQ=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID8-7.delta" sparkle:deltaFrom="7" length="161318" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="wmtkIhLU4wWs7SDhLZ/jUA6JBdzS0qXKQx+Nf++mhbiu1x/PylpVG+AZ5ArZM48nAmLFn/ai5vNXRYePPfYOBA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID8-6.delta" sparkle:deltaFrom="6" length="258970" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="v6yO9Ng3mTOnciouSe832F5KdHS5lJKsuWNkhmOoscdFT/0bd0Yf0s1fV+Mx8g2bTKCmvNIrLBh+ZfWAAls6BA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID8-5.delta" sparkle:deltaFrom="5" length="286418" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="SsVt3uD5z97qNEio5e5mhJ4u3drbxUvQSWtLPaxABW2dJUcw/qGcDvjHCmQA0OcoQlgBzsqTEgzxjML7Jn6iBg=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.4/RestinPID8-4.delta" sparkle:deltaFrom="4" length="325050" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="V4yAsQQaD4LYa02u7EpNlaKSHyrpAfBAc9epc/ZRXldhxc9Vg+5QsO13s6Bv3QUbr23F0tOtJI6PJgxal5g+AA=="/>
             </sparkle:deltas>
         </item>
     </channel>
