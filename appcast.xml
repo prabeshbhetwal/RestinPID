@@ -3,28 +3,29 @@
     <channel>
         <title>RestinPID</title>
         <item>
-            <title>3.5</title>
-            <pubDate>Wed, 04 Nov 2026 13:29:30 +1100</pubDate>
+            <title>3.6</title>
+            <pubDate>Wed, 04 Nov 2026 13:50:48 +1100</pubDate>
             <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
             <sparkle:informationalUpdate>
                 <sparkle:belowVersion>4</sparkle:belowVersion>
             </sparkle:informationalUpdate>
-            <sparkle:version>9</sparkle:version>
-            <sparkle:shortVersionString>3.5</sparkle:shortVersionString>
+            <sparkle:version>10</sparkle:version>
+            <sparkle:shortVersionString>3.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RestinPID 3.5</h2>
+            <description><![CDATA[<h2>RestinPID 3.6</h2>
 <ul>
-<li><b>Hard to miss:</b> when an app stops responding, the menu bar icon turns red. It also jiggles every few seconds until you open the panel, like a Dock icon asking for attention.</li>
-<li>Turn the jiggle off in Settings → General → Alerts. If Reduce Motion is on in System Settings, the icon stays still and just turns red.</li>
+<li><b>Quick hide:</b> a new eye-slash button on each app, next to Restart and Force Quit, takes the app out of the list. Choose 15 minutes, 1 hour, 4 hours, until tomorrow, until the app restarts, or always. The same choices are in the right-click menu.</li>
+<li>Hidden apps are also left out of Restart All and Force Quit All.</li>
+<li><b>Hidden for now:</b> Settings → Excluded lists temporarily hidden apps, shows when each one comes back, and has a Show button to bring it back right away.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID-3.5.zip" length="2011556" type="application/octet-stream" sparkle:edSignature="/Dcqt7bWyfjCdlyaY8/r4xDS7N+0yVvHIzn9piYqNeB0Dnth4fUAdXq2fT78TXwEZByG5ZEzmbPXga/tFZ/1Dw=="/>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID-3.6.zip" length="2077646" type="application/octet-stream" sparkle:edSignature="B7OqeAFG70CDCURYpx6yJNyvBzUc72HMTLCsQVroTMtgnvRf6Oai02rXea6X6GNuaJQK8TcLUY8zTJ6iWD0bBw=="/>
             <sparkle:deltas>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-8.delta" sparkle:deltaFrom="8" length="146370" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="3ayE+REfFZmUgPTCJ/bwWefGXbSfDmqJ+/UWCDXkF0JkdytCZypJkkDQ542+w5XGoyr5NhVogbhOw5vF8phVDw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-7.delta" sparkle:deltaFrom="7" length="192658" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Uj6r4pd/oq+8EEji5s2sLNxRMdbn1YWWAlJElrmll68NDBzm5+CtOWeF2Nqmpu2erJ1OhD5ngVMhL4W4HW8iCw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-6.delta" sparkle:deltaFrom="6" length="273914" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hR/HiJBSqxjymKTMgtA7wMLVpk0iixz9JmaHTQ6uzPDzaZZoedMKsDJFv+Xynnm8h966NstwFTU51E1RhZnMBQ=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-5.delta" sparkle:deltaFrom="5" length="300486" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BccvnceAuy93CQn7mjbqZGiq4AU+mQ7CtV+gE5D3obI2YJ3h+6XXH+Ko3ZCjSfsvAUT5LNKiiXOv5ql9AmkACQ=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.5/RestinPID9-4.delta" sparkle:deltaFrom="4" length="333486" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="1SEADDBpY5GIzQxIbcbDl/CwquuFqmJPFpU4ykcNuvLSdGJvn/uNCeZG2+SpIB82hTEZa0pV+eIEMyqdQwYkDA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-9.delta" sparkle:deltaFrom="9" length="232410" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="iZE/0Rrt9Bega+8gTK9zib5z1DGX23YbhiMn0jN+pqBpIuEus75wl0D3CfpLF2//eUc+M9qER1Qk4u+C1SoPCw=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-8.delta" sparkle:deltaFrom="8" length="248618" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="zzWnv+80M4TMaiNQKqCxrGtnG9zRhmM/HYM1MhI2c/a7IwXwA5nKwiwhHa8AUaCxJ8OKYAb4qUDLxhdveo9VAw=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-7.delta" sparkle:deltaFrom="7" length="279666" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="UjFL9zd3uYJXVbTJ4nMCBvjhyXrzhEpiFKJt866AufuilLUFQ8Lixule3orcde4yXxui/hbRSMF1WtA+DF+fBQ=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-6.delta" sparkle:deltaFrom="6" length="340354" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="cOCUARR7tL3NgMb55vRhijZlq1k0tgGHhwoAx3XU5NFtijIx5AZA5eq8kllUib3Iz5WrdPCbIpeG27XTMvGxDw=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-5.delta" sparkle:deltaFrom="5" length="365798" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Jd4ZO6HBK+JyO6vSKPj+/uurRE0IV8a5ZSM+0zjW6pX5p5DbI9v+kxd32xCLEMfEbRh2IxZim+roW9yzfv2tCA=="/>
             </sparkle:deltas>
         </item>
     </channel>
