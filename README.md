@@ -14,6 +14,7 @@ Click the RestinPID icon in the menu bar, or press **⌃⌥R**. A panel lists th
 - **Apps:** the apps you use from the Dock.
 - **Menu Bar & Background:** apps that run quietly in the menu bar or background, such as Paste, Raycast or KeepingYouAwake.
 - **macOS:** apps that come with your Mac, such as Finder, Dock and Control Centre. They appear only when they use more RAM or CPU than your limit, or stop responding.
+- **Needs Attention:** apps that aren't responding, and busy macOS apps, gathered in one group at the top. You can move it to the bottom in Settings → Apps.
 
 Each app shows its **RAM** and **CPU** use, measured the way Activity Monitor measures them, helper processes included. A figure turns orange when it goes over your limit. A red **Not Responding** badge marks frozen apps.
 

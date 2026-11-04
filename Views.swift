@@ -86,14 +86,18 @@ struct PanelView: View {
     }
 
     private func list(_ items: [AppItem]) -> some View {
-        let pinned = items.filter { model.pinned.contains($0.bundleID) }
-        let others = items.filter { !model.pinned.contains($0.bundleID) }
-        let groups: [(String, [AppItem])] = [
+        let attention = items.filter(model.needsAttention)
+        let rest = items.filter { !model.needsAttention($0) }
+        let pinned = rest.filter { model.pinned.contains($0.bundleID) }
+        let others = rest.filter { !model.pinned.contains($0.bundleID) }
+        let attentionGroup = ("Needs Attention", attention)
+        let groups: [(String, [AppItem])] = (model.attentionOnTop ? [attentionGroup] : []) + [
             ("Pinned", pinned),
             ("Apps", others.filter { $0.kind == .app }),
             ("Menu Bar & Background", others.filter { $0.kind == .background }),
-            (model.systemApps == .whenBusy ? "macOS · Busy or Not Responding" : "macOS", others.filter { $0.kind == .system }),
-        ].filter { !$0.1.isEmpty }
+            ("macOS", others.filter { $0.kind == .system }),
+        ] + (model.attentionOnTop ? [] : [attentionGroup])
+        let shownGroups = groups.filter { !$0.1.isEmpty }
         let showTotals = model.showMemory && model.panelTotals == .listed
         let showMac = model.showMemory && model.panelTotals == .system
         return ScrollViewReader { proxy in
@@ -103,7 +107,7 @@ struct PanelView: View {
                         SectionHeader(title: "This Mac", trailing: macUsage)
                             .help("Whole Mac, as in Activity Monitor: Memory Used (of installed RAM), and CPU load across all cores.")
                     }
-                    ForEach(groups, id: \.0) { title, rows in
+                    ForEach(shownGroups, id: \.0) { title, rows in
                         SectionHeader(title: title, trailing: showTotals ? usageText(model.totals(rows)) : nil)
                             .help(showTotals ? "Total for the apps in this group. CPU: 100% is one full core, as in each row." : "")
                         ForEach(rows) { AppRow(model: model, item: $0) }
@@ -111,7 +115,7 @@ struct PanelView: View {
                 }
                 .padding(6)
             }
-            .frame(height: min(CGFloat(items.count) * 46 + CGFloat(groups.count + (showMac ? 1 : 0)) * 30, 520))
+            .frame(height: min(CGFloat(items.count) * 46 + CGFloat(shownGroups.count + (showMac ? 1 : 0)) * 30, 520))
             .onChange(of: model.selection) { id in
                 if let id { proxy.scrollTo(id) }
             }
@@ -193,8 +197,18 @@ private struct AppRow: View {
                 .resizable()
                 .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 4) {
-                    Text(item.name).lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(item.name).lineLimit(1).truncationMode(.tail)
+                    if item.frozen {
+                        Text("Not Responding")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.red)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Color.red.opacity(0.15)))
+                    }
                     if isWatched {
                         Image(systemName: "eye")
                             .font(.caption2)
@@ -205,14 +219,6 @@ private struct AppRow: View {
                 if model.showMemory, item.memory > 0 { usage }
             }
             Spacer(minLength: 4)
-            if item.frozen {
-                Text("Not Responding")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(Color.red.opacity(0.15)))
-            }
             if busy {
                 ProgressView().controlSize(.small)
             } else if hovering || selected {
@@ -268,6 +274,7 @@ private struct AppRow: View {
         }
         .font(.caption)
         .monospacedDigit()
+        .lineLimit(1)
         .help("RAM: memory used by the app and its helper processes.\nCPU: processor use, where 100% is one full core (same as Activity Monitor).\nOrange: over its busy limit (Settings → Apps).")
     }
 
@@ -458,10 +465,15 @@ struct AppsTab: View {
                     Text("When busy or not responding").tag(SystemAppsMode.whenBusy)
                     Text("Always").tag(SystemAppsMode.always)
                 }
+                Picker("Apps that need attention", selection: $model.attentionOnTop) {
+                    Text("At the top").tag(true)
+                    Text("At the bottom").tag(false)
+                }
+                .pickerStyle(.segmented)
             } header: {
                 Text("Apps in the list")
             } footer: {
-                Text("Showing \(shownCount) of your \(ownCount) running apps right now. Pinned apps and apps that stop responding always show. macOS apps are the ones that came with your Mac (Finder, Dock, Spotlight…).")
+                Text("Showing \(shownCount) of your \(ownCount) running apps right now. Pinned apps and apps that stop responding always show. Needs Attention gathers apps that aren’t responding and busy macOS apps (the ones that came with your Mac, such as Finder or Dock).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

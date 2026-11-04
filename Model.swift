@@ -88,6 +88,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var ownMemory: UInt64 = 0
     @Published private(set) var ownCPU: Double?
     @Published var selfHeal: Bool { didSet { defaults.set(selfHeal, forKey: "selfHeal") } }
+    @Published var attentionOnTop: Bool { didSet { defaults.set(attentionOnTop, forKey: "attentionOnTop") } }
     @Published var busyMatch: BusyMatch { didSet { defaults.set(busyMatch.rawValue, forKey: "busyMatch") } }
     /// Hide your own apps (Dock and background) unless they're busy, frozen or pinned.
     @Published var hideQuietApps: Bool { didSet { defaults.set(hideQuietApps, forKey: "hideQuietApps") } }
@@ -135,6 +136,7 @@ final class AppModel: ObservableObject {
     private var highUseAt: [pid_t: Date] = [:]  // last time over a limit; keeps macOS apps from flickering
     private var axAnswered = Set<pid_t>()       // answered an Accessibility ping at least once
     private var axSilent = Set<pid_t>()         // background apps that never answer; not pinged again
+    private var axMisses: [pid_t: Int] = [:]    // missed pings in a row; frozen needs two (one can be a busy moment)
 
     private init() {
         Self.migrateOldSettings()
@@ -146,6 +148,7 @@ final class AppModel: ObservableObject {
         showMemory = defaults.object(forKey: "showMemory") as? Bool ?? true
         appearance = AppearanceMode(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         selfHeal = defaults.object(forKey: "selfHeal") as? Bool ?? true
+        attentionOnTop = defaults.object(forKey: "attentionOnTop") as? Bool ?? true
         busyMatch = BusyMatch(rawValue: defaults.string(forKey: "busyMatch") ?? "") ?? .either
         hideQuietApps = defaults.object(forKey: "hideQuietApps") as? Bool ?? false
         panelTotals = UsageScope(rawValue: defaults.string(forKey: "panelTotals") ?? "") ?? .listed
@@ -284,8 +287,15 @@ final class AppModel: ObservableObject {
             .sorted { rank($0) < rank($1) }
     }
 
+    /// Same order as the panel's groups, so ↑↓ moves down the list as drawn.
     private func rank(_ item: AppItem) -> (Int, Int, String) {
-        (pinned.contains(item.bundleID) ? 0 : 1, item.kind.rawValue, item.name.lowercased())
+        let section = needsAttention(item) ? (attentionOnTop ? 0 : 3) : pinned.contains(item.bundleID) ? 1 : 2
+        return (section, item.kind.rawValue, item.name.lowercased())
+    }
+
+    /// Frozen apps, and macOS apps that are only listed because they're busy.
+    func needsAttention(_ item: AppItem) -> Bool {
+        item.frozen || (item.kind == .system && systemApps == .whenBusy && !pinned.contains(item.bundleID))
     }
 
     func isShown(_ item: AppItem) -> Bool {
@@ -392,7 +402,8 @@ final class AppModel: ObservableObject {
                     // Dock apps always answer Accessibility, so a timeout means frozen. Background apps
                     // count only if they answered before; some never do (an instant error, or no reply).
                     let answers = item.app.activationPolicy == .regular || self.axAnswered.contains(item.id)
-                    item.frozen = s.ping == false && answers
+                    self.axMisses[item.id] = s.ping == false && answers ? (self.axMisses[item.id] ?? 0) + 1 : 0
+                    item.frozen = (self.axMisses[item.id] ?? 0) >= 2
                     if !answers, s.ping != true, trusted { self.axSilent.insert(item.id) }
                     if let last = self.lastCPU[item.id], now > last.at {
                         // ponytail: a helper exiting between samples drops its time; clamp at 0
@@ -407,6 +418,7 @@ final class AppModel: ObservableObject {
                 self.highUseAt = self.highUseAt.filter { pids.contains($0.key) }
                 self.axAnswered.formIntersection(pids)
                 self.axSilent.formIntersection(pids)
+                self.axMisses = self.axMisses.filter { pids.contains($0.key) }
                 if self.selection == nil || !self.visible.contains(where: { $0.id == self.selection }) {
                     self.selection = self.visible.first?.id
                 }

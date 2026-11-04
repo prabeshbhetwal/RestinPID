@@ -17,13 +17,20 @@ import AppKit
   print("1 listed from /tmp: PASS")
   // Watchdog: freeze, expect auto-restart after >= 5 s
   let oldPid = a.id; kill(oldPid, SIGSTOP)
-  wait(4); print("2 frozen badge:", te()?.frozen == true ? "PASS" : "FAIL")
+  wait(9); print("2 frozen badge:", te()?.frozen == true ? "PASS" : "FAIL")
+  // Needs Attention: on top by default, after every calm app when set to the bottom
+  let onTop = m.visible.first?.bundleID == "com.test.ARDummy"
+  m.attentionOnTop = false
+  let v = m.visible, at = v.firstIndex { $0.bundleID == "com.test.ARDummy" } ?? -1
+  let onBottom = at >= 0 && !v.enumerated().contains { $0.offset > at && !m.needsAttention($0.element) }
+  m.attentionOnTop = true
+  print("14 frozen app top / bottom:", onTop && onBottom ? "PASS" : "FAIL")
   wait(14)
   let b = te(); let h = m.history.first
   print("3 watchdog restarted:", (b != nil && b!.id != oldPid && !isAlive(oldPid) && h?.automatic == true && h?.ok == true) ? "PASS" : "FAIL", "history:", h.map { "\($0.action) auto=\($0.automatic) ok=\($0.ok)" } ?? "none")
   // Exclude
   m.excluded.insert("com.test.ARDummy"); print("4 exclude hides:", te() == nil ? "PASS" : "FAIL")
-  m.excluded.remove("com.test.ARDummy"); wait(0.5)
+  m.excluded.remove("com.test.ARDummy"); wait(3.5) // one poll, so the re-listed row has its RAM again
   // Busy rule: RAM over a tiny limit, CPU under a huge one -> busy with "or", not with "and"
   if let x = te() {
     m.ramLimitGB = 0.0001; m.cpuLimit = 400
