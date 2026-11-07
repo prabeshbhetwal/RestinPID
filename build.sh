@@ -5,8 +5,10 @@ set -e
 cd "$(dirname "$0")"
 
 if [ ! -f AppIcon.icns ]; then
-  ICONSET="$(mktemp -d)/AppIcon.iconset"
-  xcrun swift make-icon.swift "$ICONSET"
+  TMP="$(mktemp -d)"
+  ICONSET="$TMP/AppIcon.iconset"
+  xcrun swiftc -parse-as-library make-icon.swift Icon.swift -o "$TMP/make-icon"
+  "$TMP/make-icon" "$ICONSET"
   iconutil -c icns "$ICONSET" -o AppIcon.icns
 fi
 
