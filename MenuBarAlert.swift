@@ -71,7 +71,10 @@ final class MenuBarIcon {
     init(button: NSStatusBarButton) {
         self.button = button
         button.wantsLayer = true
-        subscription = settings.objectWillChange
+        // Settings changes restart the motion; a Reduce Motion switch must also stop (or resume) a running glow.
+        let accessibility = NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification).map { _ in () }
+        subscription = settings.objectWillChange.merge(with: accessibility)
             .receive(on: DispatchQueue.main) // read the settings after the change lands
             .sink { [weak self] in self?.refresh(restartMotion: true) }
         refresh(restartMotion: false)
