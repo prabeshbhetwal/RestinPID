@@ -24,7 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var keyMonitor: Any?
     private var subscriptions = Set<AnyCancellable>()
     private var knownFrozen = Set<pid_t>()  // frozen apps already announced
-    private var alertTimer: Timer?          // repeats the jiggle until the panel is opened
+    private var menuIcon: MenuBarIcon!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
@@ -59,24 +59,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             return self.model.handleKey(event) ? nil : event
         }
 
-        // Menu bar icon: red warning (and a jiggle) when a listed app is frozen, a dot when an update is waiting.
-        statusItem.button?.wantsLayer = true
+        // Menu bar icon: colour badge, count, glow and jiggle when a listed app is frozen; a dot when an update waits.
+        menuIcon = MenuBarIcon(button: statusItem.button!)
+        AlertSettings.shared.preview = { [weak self] in self?.menuIcon.preview() }
         model.$all
             .map { [model] in Set($0.filter { $0.frozen && model.isShown($0) }.map(\.id)) }
             .combineLatest(model.$availableUpdate.map { $0 != nil })
             .removeDuplicates { $0 == $1 }
             .sink { [weak self] frozen, update in
-                guard let self, let button = self.statusItem.button else { return }
-                button.image = !frozen.isEmpty
-                    ? NSImage(systemSymbolName: "exclamationmark.arrow.circlepath", accessibilityDescription: "RestinPID – an app is not responding")
-                    : update ? badgedSymbol("arrow.clockwise.circle", label: "RestinPID – update available")
-                    : NSImage(systemSymbolName: "arrow.clockwise.circle", accessibilityDescription: "RestinPID")
-                button.contentTintColor = frozen.isEmpty ? nil : .systemRed
-                if !frozen.subtracting(self.knownFrozen).isEmpty { self.startAlert() } // a newly frozen app
-                if frozen.isEmpty { self.stopAlert() }
+                guard let self else { return }
+                let newlyFrozen = !frozen.subtracting(self.knownFrozen).isEmpty
+                self.menuIcon.show(frozen: frozen.count, update: update, newlyFrozen: newlyFrozen)
                 self.knownFrozen = frozen
             }
             .store(in: &subscriptions)
+        if CommandLine.arguments.contains("--preview-alert") { menuIcon.preview() } // for checking the look
 
         // Optional RAM · CPU reading next to the icon; refreshed with each poll.
         model.$all.map { _ in () }
@@ -103,20 +100,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     // MARK: Status item + popover
-
-    /// Jiggle now and every 8 s, like a Dock icon asking for attention, until the panel opens.
-    private func startAlert() {
-        guard model.jiggleIcon, alertTimer == nil, let button = statusItem.button else { return }
-        jiggle(button)
-        alertTimer = Timer.scheduledTimer(withTimeInterval: 8, repeats: true) { [weak button] _ in
-            if let button { jiggle(button) }
-        }
-    }
-
-    private func stopAlert() {
-        alertTimer?.invalidate()
-        alertTimer = nil
-    }
 
     private func updateStatusReading() {
         guard let button = statusItem.button else { return }
@@ -156,7 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             popover.performClose(nil)
             return
         }
-        stopAlert() // seen it; the icon stays red while the app is frozen
+        menuIcon.acknowledge() // seen it: motion stops, the badge stays while the app is frozen
         model.prepareForDisplay()
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)

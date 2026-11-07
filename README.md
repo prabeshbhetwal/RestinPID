@@ -18,7 +18,7 @@ Click the RestinPID icon in the menu bar, or press **⌃⌥R**. A panel lists th
 
 Each app shows its **RAM** and **CPU** use, measured the way Activity Monitor measures them, helper processes included. A figure turns orange when it goes over your limit. A red **Not Responding** badge marks frozen apps.
 
-When an app stops responding, the menu bar icon turns red and jiggles every few seconds until you open the panel, like a Dock icon asking for attention. You can turn the jiggle off in Settings → General.
+When an app stops responding, the menu bar tombstone turns into a solid red badge with a "!" and a count of frozen apps. A glow pulses behind it and it jiggles every few seconds until you open the panel, like a Dock icon asking for attention. The badge carries its own halo, so it stays visible on black, white and everything in between. Settings → Alerts sets the colour, icon size, glow speed, jiggle strength and timing, and has a preview button. With Reduce Motion on, the glow holds steady and nothing moves.
 
 Click an app to restart it, or use its buttons:
 

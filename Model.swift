@@ -103,7 +103,6 @@ final class AppModel: ObservableObject {
     @Published private(set) var hiddenRun: [String: pid_t] {
         didSet { defaults.set(hiddenRun.mapValues(Int.init), forKey: "hiddenRun") }
     }
-    @Published var jiggleIcon: Bool { didSet { defaults.set(jiggleIcon, forKey: "jiggleIcon") } }
     @Published var attentionOnTop: Bool { didSet { defaults.set(attentionOnTop, forKey: "attentionOnTop") } }
     @Published var busyMatch: BusyMatch { didSet { defaults.set(busyMatch.rawValue, forKey: "busyMatch") } }
     /// Hide your own apps (Dock and background) unless they're busy, frozen or pinned.
@@ -165,7 +164,6 @@ final class AppModel: ObservableObject {
         appearance = AppearanceMode(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         selfHeal = defaults.object(forKey: "selfHeal") as? Bool ?? true
         attentionOnTop = defaults.object(forKey: "attentionOnTop") as? Bool ?? true
-        jiggleIcon = defaults.object(forKey: "jiggleIcon") as? Bool ?? true
         hiddenUntil = (defaults.dictionary(forKey: "hiddenUntil") as? [String: Double] ?? [:]).mapValues { Date(timeIntervalSince1970: $0) }
         hiddenRun = (defaults.dictionary(forKey: "hiddenRun") as? [String: Int] ?? [:]).mapValues { pid_t($0) }
         busyMatch = BusyMatch(rawValue: defaults.string(forKey: "busyMatch") ?? "") ?? .either

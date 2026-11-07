@@ -432,6 +432,7 @@ func makeSettingsController(model: AppModel, updater: SPUUpdater) -> NSTabViewCo
     controller.tabStyle = .toolbar
     controller.tabViewItems = [
         tab("General", "gearshape", GeneralTab(model: model)),
+        tab("Alerts", "bell.badge", AlertsTab(settings: .shared)),
         tab("Apps", "square.grid.2x2", AppsTab(model: model)),
         tab("Usage", "gauge.with.dots.needle.33percent", UsageTab(model: model)),
         tab("Auto-Restart", "bolt.heart", AutoRestartTab(model: model)),
@@ -510,16 +511,6 @@ struct GeneralTab: View {
                 Text("Restart All, Force Quit All and actions on macOS apps always ask first.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
-            Section {
-                Toggle("Jiggle the menu bar icon when an app stops responding", isOn: $model.jiggleIcon)
-            } header: {
-                Text("Alerts")
-            } footer: {
-                Text("The icon turns red whenever an app isn’t responding. With this on, it also shakes every few seconds until you open the panel. If Reduce Motion is on in System Settings, it stays still.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             Section("Keyboard (in the panel)") {
                 ShortcutRow(keys: "↑ ↓", action: "Move selection")
@@ -843,7 +834,7 @@ struct UpdatesTab: View {
 }
 
 /// Title with the current value on the right, a slider underneath, range ends labelled.
-private struct LimitSlider: View {
+struct LimitSlider: View {
     let title: String
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -925,34 +916,6 @@ private struct HotkeyRecorder: View {
 }
 
 // MARK: - Helpers
-
-/// A short side-to-side shake, like a Dock icon asking for attention. Skipped with Reduce Motion.
-func jiggle(_ view: NSView) {
-    guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
-    view.wantsLayer = true
-    let shake = CAKeyframeAnimation(keyPath: "transform.translation.x")
-    shake.values = [0, -4, 4, -4, 4, -3, 3, -1.5, 1.5, 0]
-    shake.duration = 0.6
-    view.layer?.add(shake, forKey: "jiggle")
-}
-/// SF Symbol with a dot cut into its top-right corner; stays a template so it matches the menu bar.
-func badgedSymbol(_ name: String, label: String) -> NSImage? {
-    guard let base = NSImage(systemSymbolName: name, accessibilityDescription: label) else { return nil }
-    let image = NSImage(size: base.size, flipped: false) { rect in
-        base.draw(in: rect)
-        let d = rect.width * 0.38
-        let dot = NSRect(x: rect.maxX - d, y: rect.maxY - d, width: d, height: d)
-        NSGraphicsContext.current?.compositingOperation = .clear
-        NSBezierPath(ovalIn: dot.insetBy(dx: -1.5, dy: -1.5)).fill()
-        NSGraphicsContext.current?.compositingOperation = .sourceOver
-        NSColor.black.setFill()
-        NSBezierPath(ovalIn: dot).fill()
-        return true
-    }
-    image.isTemplate = true
-    image.accessibilityDescription = label
-    return image
-}
 
 
 private func appURL(_ bundleID: String) -> URL? {
