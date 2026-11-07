@@ -3,29 +3,31 @@
     <channel>
         <title>RestinPID</title>
         <item>
-            <title>3.6</title>
-            <pubDate>Wed, 04 Nov 2026 13:50:48 +1100</pubDate>
+            <title>3.7</title>
+            <pubDate>Sun, 08 Nov 2026 02:52:41 +1100</pubDate>
             <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
             <sparkle:informationalUpdate>
                 <sparkle:belowVersion>4</sparkle:belowVersion>
             </sparkle:informationalUpdate>
-            <sparkle:version>10</sparkle:version>
-            <sparkle:shortVersionString>3.6</sparkle:shortVersionString>
+            <sparkle:version>11</sparkle:version>
+            <sparkle:shortVersionString>3.7</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RestinPID 3.6</h2>
+            <description><![CDATA[<h2>RestinPID 3.7</h2>
 <ul>
-<li><b>Quick hide:</b> a new eye-slash button on each app, next to Restart and Force Quit, takes the app out of the list. Choose 15 minutes, 1 hour, 4 hours, until tomorrow, until the app restarts, or always. The same choices are in the right-click menu.</li>
-<li>Hidden apps are also left out of Restart All and Force Quit All.</li>
-<li><b>Hidden for now:</b> Settings → Excluded lists temporarily hidden apps, shows when each one comes back, and has a Show button to bring it back right away.</li>
+<li><b>New icon:</b> a tombstone whose top is a restart arrow, with a heartbeat inside. It replaces the app icon and the menu bar icon.</li>
+<li><b>Easier to spot when an app stops responding:</b> the menu bar icon becomes a solid red tombstone with a "!" and a count of frozen apps, a glow pulses behind it, and it jiggles until you open the panel.</li>
+<li>The warning no longer turns black: it now stays visible on black, white and every menu bar in between.</li>
+<li><b>Settings → Alerts:</b> choose the colour, solid or outline, the count, icon size, glow speed, and jiggle strength and timing. Previews show the icon on black, grey and white menu bars, and a button shows it in your menu bar.</li>
+<li>With Reduce Motion on in System Settings, the glow holds steady and nothing moves.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID-3.6.zip" length="2077646" type="application/octet-stream" sparkle:edSignature="B7OqeAFG70CDCURYpx6yJNyvBzUc72HMTLCsQVroTMtgnvRf6Oai02rXea6X6GNuaJQK8TcLUY8zTJ6iWD0bBw=="/>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.7/RestinPID-3.7.zip" length="2778276" type="application/octet-stream" sparkle:edSignature="eI69/P7WhD573KhjvK5mzK6Gu0+si4qohK0zzaad4/5LRLYUrceKHZCTNhvcC5KP/JjRYbxIKDLn+bm0gZypDQ=="/>
             <sparkle:deltas>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-9.delta" sparkle:deltaFrom="9" length="232410" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="iZE/0Rrt9Bega+8gTK9zib5z1DGX23YbhiMn0jN+pqBpIuEus75wl0D3CfpLF2//eUc+M9qER1Qk4u+C1SoPCw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-8.delta" sparkle:deltaFrom="8" length="248618" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="zzWnv+80M4TMaiNQKqCxrGtnG9zRhmM/HYM1MhI2c/a7IwXwA5nKwiwhHa8AUaCxJ8OKYAb4qUDLxhdveo9VAw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-7.delta" sparkle:deltaFrom="7" length="279666" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="UjFL9zd3uYJXVbTJ4nMCBvjhyXrzhEpiFKJt866AufuilLUFQ8Lixule3orcde4yXxui/hbRSMF1WtA+DF+fBQ=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-6.delta" sparkle:deltaFrom="6" length="340354" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="cOCUARR7tL3NgMb55vRhijZlq1k0tgGHhwoAx3XU5NFtijIx5AZA5eq8kllUib3Iz5WrdPCbIpeG27XTMvGxDw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.6/RestinPID10-5.delta" sparkle:deltaFrom="5" length="365798" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Jd4ZO6HBK+JyO6vSKPj+/uurRE0IV8a5ZSM+0zjW6pX5p5DbI9v+kxd32xCLEMfEbRh2IxZim+roW9yzfv2tCA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.7/RestinPID11-10.delta" sparkle:deltaFrom="10" length="903806" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="6MedLWv6IEHQh8Z0WyWeGaLfxia7z+7ZHYQTgh7OHXo2te73ylYlZg5T0qhYL3ZqXFZnoAJMdsH6ETx+6CGeBA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.7/RestinPID11-9.delta" sparkle:deltaFrom="9" length="979202" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="v3tjB69Y/3ogkAmu9O6orxQetVfARIhWtZgXzQfK1v1xgTDQnk89f47aoNxSP7+r3f7UH07CpAS1FzFZGssKAA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.7/RestinPID11-8.delta" sparkle:deltaFrom="8" length="978422" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="b9YkjIBFQ1WtU2aXbRkwDQJDPi8dLTxLRTNT3mpNjO4B2ybon23MEJRvEBDiJQTnM5caDFTr2/bVlHgVrY8EBg=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.7/RestinPID11-7.delta" sparkle:deltaFrom="7" length="1003222" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="NnnkCWk/ZxT3pWnmYp4x/q5kJki+hgvrIURIIsZraUR0D/lf0mSjApkKFTog3gEUVoRpg0Gj+Z2jURvL3vafCA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.7/RestinPID11-6.delta" sparkle:deltaFrom="6" length="1058210" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="B7m9bi6/M0VRctlHOEOBYjZBvGjzwtDRxlIOlnT520E6aVsu4zg68d3SSgQAdpaUww3/rFrj1GUax/CuoCtCAA=="/>
             </sparkle:deltas>
         </item>
     </channel>
