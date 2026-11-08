@@ -2,9 +2,10 @@
 
 *Rest in PID.* A menu bar app for your Mac that force quits and restarts apps, even frozen ones. It also shows how much RAM and CPU each app is using.
 
+Free and open source. macOS 13 Ventura or later, Apple silicon and Intel. [Download the latest version](https://github.com/prabeshbhetwal/RestinPID/releases/latest).
+
 <p>
-  <img src="screenshots/panel-light.png" width="360" alt="RestinPID panel in light mode">
-  <img src="screenshots/panel-dark.png" width="360" alt="RestinPID panel in dark mode">
+  <img src="screenshots/panel.png" width="380" alt="The RestinPID panel listing running apps with their RAM and CPU use, and restart, force quit and hide buttons on the selected app">
 </p>
 
 ## What it does
@@ -19,6 +20,9 @@ Click the RestinPID icon in the menu bar, or press **⌃⌥R**. A panel lists th
 Each app shows its **RAM** and **CPU** use: the same measures Activity Monitor uses, with each app's helper processes added in. A figure turns orange when it goes over your limit. A red **Not Responding** label marks frozen apps.
 
 When an app stops responding, the menu bar tombstone turns into a solid red badge with a “!” and a count of frozen apps. A glow pulses behind it and it jiggles every few seconds until you open the panel (for up to 10 minutes), like a Dock icon asking for attention. The badge carries its own halo, so it stays visible on black, white and everything in between. Settings → Alerts sets the colour, icon size, glow speed, jiggle strength and timing, and has a preview button. With Reduce Motion on, the glow holds steady and nothing moves.
+
+<img src="screenshots/settings-alerts.png" width="600" alt="Settings, Alerts tab: the normal and not-responding menu bar icons previewed on black, grey and white menu bars, with contrast ratios">
+
 
 Click an app to restart it, or use its buttons:
 
@@ -79,7 +83,7 @@ Works on macOS 13 Ventura and later, on Apple silicon and Intel Macs.
 
 ## Settings
 
-![Settings](screenshots/settings-window.png)
+<img src="screenshots/settings-general.png" width="600" alt="Settings, General tab: appearance, launch at login, panel shortcut, ask before restarting, and notifications">
 
 | Tab | What you can change |
 |---|---|
@@ -118,9 +122,17 @@ RestinPID is free and open source under the [MIT licence](LICENSE). It comes as 
 
 ## Feedback
 
-Found a problem or have an idea? Choose **Send Feedback…** from the gear menu, or [open an issue](https://github.com/prabeshbhetwal/RestinPID/issues/new/choose).
+Found a problem or have an idea? Choose **Send Feedback…** from the gear menu, or [open an issue](https://github.com/prabeshbhetwal/RestinPID/issues/new/choose). Issues are public, so leave out names, emails and file paths.
 
-![Send Feedback](screenshots/feedback.png)
+## Build from source
+
+Needs Xcode 15 or later (Swift 5.9). See [DEVELOPING.md](DEVELOPING.md) for the self-test and the release steps.
+
+```sh
+git clone https://github.com/prabeshbhetwal/RestinPID.git
+cd RestinPID
+./build.sh && open RestinPID.app
+```
 
 ## Coming from AppRestarter?
 
