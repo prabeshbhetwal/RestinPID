@@ -16,9 +16,9 @@ Click the RestinPID icon in the menu bar, or press **⌃⌥R**. A panel lists th
 - **macOS:** apps that come with your Mac, such as Finder, Dock and Control Centre. They appear only when they use more RAM or CPU than your limit, or stop responding.
 - **Needs Attention:** apps that aren't responding, and busy macOS apps, gathered in one group at the top. You can move it to the bottom in Settings → Apps.
 
-Each app shows its **RAM** and **CPU** use, measured the way Activity Monitor measures them, helper processes included. A figure turns orange when it goes over your limit. A red **Not Responding** badge marks frozen apps.
+Each app shows its **RAM** and **CPU** use: the same measures Activity Monitor uses, with each app's helper processes added in. A figure turns orange when it goes over your limit. A red **Not Responding** label marks frozen apps.
 
-When an app stops responding, the menu bar tombstone turns into a solid red badge with a "!" and a count of frozen apps. A glow pulses behind it and it jiggles every few seconds until you open the panel, like a Dock icon asking for attention. The badge carries its own halo, so it stays visible on black, white and everything in between. Settings → Alerts sets the colour, icon size, glow speed, jiggle strength and timing, and has a preview button. With Reduce Motion on, the glow holds steady and nothing moves.
+When an app stops responding, the menu bar tombstone turns into a solid red badge with a “!” and a count of frozen apps. A glow pulses behind it and it jiggles every few seconds until you open the panel (for up to 10 minutes), like a Dock icon asking for attention. The badge carries its own halo, so it stays visible on black, white and everything in between. Settings → Alerts sets the colour, icon size, glow speed, jiggle strength and timing, and has a preview button. With Reduce Motion on, the glow holds steady and nothing moves.
 
 Click an app to restart it, or use its buttons:
 
@@ -26,13 +26,15 @@ Click an app to restart it, or use its buttons:
 - **Force Quit** quits the app without reopening it.
 - **Hide** (eye-slash) takes the app out of the list for a while, until it restarts, or for good.
 
-**Restart All** and **Force Quit All** act on every app in the list at once, except macOS apps. They always ask first.
+Restarting or force quitting an app loses any unsaved work in it, so RestinPID asks first. You can turn that off in **Settings → General**. **Restart All** and **Force Quit All** act on every app in the list at once, except macOS apps. They always ask first.
+
+Quitting an app owned by another user on your Mac needs your administrator password; macOS shows the prompt.
 
 To restart RestinPID itself, click **⟳** next to the gear at the top of the panel.
 
 ## Features
 
-- **Auto-restart frozen apps:** choose apps that restart by themselves when they stay frozen for a time you set.
+- **Auto-restart frozen apps:** choose apps that restart by themselves when they stay frozen for a time you set. Installer, Disk Utility and Migration Assistant are never restarted automatically, because stopping them mid-job can do damage.
 - **Restarts itself:** if RestinPID ever freezes or slows down, it restarts itself. You can turn this off.
 - **Hide quiet apps:** show only apps that are busy, meaning over your RAM limit **or** CPU limit, or over **both** at once. You choose which.
 - **Search and pins:** type to filter the list, and pin the apps you use most to the top. Pin a macOS app to always see it.
@@ -49,7 +51,11 @@ To restart RestinPID itself, click **⟳** next to the gear at the top of the pa
 
 1. Download the latest `RestinPID-<version>.zip` from [Releases](https://github.com/prabeshbhetwal/RestinPID/releases/latest).
 2. Unzip it and drag **RestinPID** into your **Applications** folder.
-3. The first time, **right-click** RestinPID and choose **Open**, then **Open** again. macOS asks this once for apps downloaded outside the App Store.
+3. Open RestinPID. RestinPID isn't notarised by Apple yet, so the first time macOS says it can't check it:
+   - **macOS 15 Sequoia and later:** click **Done**, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to RestinPID, then confirm.
+   - **macOS 13 and 14:** right-click RestinPID, choose **Open**, then **Open** again.
+
+   macOS asks this only once.
 
 **Allow Accessibility access** so RestinPID can tell when an app is not responding: go to **Settings → Auto-Restart → Open Accessibility Settings…** and switch RestinPID on. Without it, everything else still works, but there's no Not Responding badge and no auto-restart.
 
@@ -77,7 +83,8 @@ Works on macOS 13 Ventura and later, on Apple silicon and Intel Macs.
 
 | Tab | What you can change |
 |---|---|
-| General | Appearance, launch at login, the panel shortcut, whether to ask before each action, and notifications. |
+| General | Appearance, launch at login, the panel shortcut, whether to ask before each action (on unless you turn it off), and notifications. |
+| Alerts | The Not Responding warning in the menu bar: colour, solid or outline, count, icon size, glow speed, jiggle strength and timing, and a preview. |
 | Apps | Which apps the list shows: menu bar and background apps, only busy apps, and macOS apps. Also what "busy" means: RAM **or** CPU over your limits, or **both** at once. |
 | Usage | RAM and CPU on each app, totals in the panel (per group or the whole Mac), and an optional reading next to the menu bar icon. |
 | Auto-Restart | Apps that restart by themselves when frozen, how long to wait first, and whether RestinPID restarts itself if it gets stuck. |
@@ -97,7 +104,17 @@ Click any of them to see what's new and install it. To check right away, choose 
 
 ## Privacy
 
-Everything RestinPID measures stays on your Mac. It only goes online to check for updates. Feedback opens a page in your browser, and nothing is sent until you submit it there.
+RestinPID has no accounts, analytics or crash reporting. Everything it measures (apps, RAM, CPU, history and settings) stays on your Mac.
+
+It goes online only to check for and download updates, using [Sparkle](https://sparkle-project.org). The check fetches a file from GitHub (`raw.githubusercontent.com`) and updates download from GitHub Releases. Like any web request, GitHub sees your IP address, and the request names the RestinPID and macOS versions. RestinPID doesn't send a system profile. You can turn off automatic checks in **Settings → Updates**. GitHub's own [privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement) covers what it keeps.
+
+**Send Feedback…** opens a GitHub issue page in your browser, filled in with what you typed and, if you leave it ticked, your RestinPID version, macOS version and chip. Nothing is sent until you submit it there, and GitHub issues are public, along with your GitHub username.
+
+Questions about privacy: open an issue, or use [private security reporting](https://github.com/prabeshbhetwal/RestinPID/security/advisories/new) for anything you don't want public.
+
+## Licence
+
+RestinPID is free and open source under the [MIT licence](LICENSE). It comes as is, with no warranty, to the extent the law allows. It includes [Sparkle](https://github.com/sparkle-project/Sparkle) (MIT licence; its notice ships inside the app as `Sparkle-LICENSE.txt`).
 
 ## Feedback
 

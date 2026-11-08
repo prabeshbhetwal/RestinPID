@@ -17,7 +17,8 @@ import AppKit
   print("1 listed from /tmp: PASS")
   // Watchdog: freeze, expect auto-restart after >= 5 s
   let oldPid = a.id; kill(oldPid, SIGSTOP)
-  wait(9); print("2 frozen badge:", te()?.frozen == true ? "PASS" : "FAIL")
+  for _ in 0..<40 where te()?.frozen != true { wait(0.5) } // two missed pings; latency varies by macOS version
+  print("2 frozen badge:", te()?.frozen == true ? "PASS" : "FAIL")
   // Needs Attention: on top by default, after every calm app when set to the bottom
   let onTop = m.visible.first?.bundleID == "com.test.ARDummy"
   m.attentionOnTop = false
@@ -25,7 +26,7 @@ import AppKit
   let onBottom = at >= 0 && !v.enumerated().contains { $0.offset > at && !m.needsAttention($0.element) }
   m.attentionOnTop = true
   print("14 frozen app top / bottom:", onTop && onBottom ? "PASS" : "FAIL")
-  wait(14)
+  wait(11)
   let b = te(); let h = m.history.first
   print("3 watchdog restarted:", (b != nil && b!.id != oldPid && !isAlive(oldPid) && h?.automatic == true && h?.ok == true) ? "PASS" : "FAIL", "history:", h.map { "\($0.action) auto=\($0.automatic) ok=\($0.ok)" } ?? "none")
   // Exclude
@@ -43,7 +44,7 @@ import AppKit
     let shown = te().map { m.isShown($0) } ?? false
     print("13 hide quiet apps:", hidden && shown ? "PASS" : "FAIL", "quiet hidden=\(hidden), busy shown=\(shown)")
     m.hideQuietApps = false; m.ramLimitGB = 1; m.cpuLimit = 50
-  }
+  } else { print("12 13: FAIL (Dummy not listed, checks skipped)") }
   // Quick hide: timed hide and Show again; until-restart hide ends when the app restarts
   if let x = te() {
     m.hide(x, .minutes(15)); let timed = !m.isShown(x)
@@ -53,10 +54,14 @@ import AppKit
     m.perform(.restart, on: [x]); wait(6)
     let y = te(); let after = y.map { $0.id != x.id && m.isShown($0) } ?? false
     print("16 hide until restart:", hidden && after && m.hiddenRun.isEmpty ? "PASS" : "FAIL", "hidden=\(hidden) shownAfterRestart=\(after)")
-  }
+  } else { print("15 16: FAIL (Dummy not listed, checks skipped)") }
   // Force quit only (no relaunch)
   if let c = te() { m.perform(.forceQuit, on: [c]); wait(3)
     print("5 force quit, no relaunch:", (te() == nil && !isAlive(c.id) && m.history.first?.action == "Force Quit") ? "PASS" : "FAIL") }
+  else { print("5: FAIL (Dummy not listed, check skipped)") }
+  // PID reuse guard: a start time is read for a live process and differs from a made-up one
+  let me = startTime(getpid())
+  print("17 start time:", me != nil && me != 0 && startTime(99_999) == nil ? "PASS" : "FAIL")
   // Grouping: no nested helpers, never loginwindow, Finder counts as macOS
   let paths = m.all.compactMap { $0.app.bundleURL?.path }
   let finder = m.all.first { $0.bundleID == "com.apple.finder" }
@@ -79,8 +84,9 @@ import AppKit
   print("9 self-restart over RAM limit:", selfReasons.contains { $0.contains("RAM") } ? "PASS" : "FAIL", selfReasons.first ?? "")
   selfReasons = []; m.selfLimits.ram = UInt64(500) << 20; d.set(false, forKey: "selfHeal")
   wait(5)
+  selfReasons = [] // a tick from check 9 can land during the wait above; only count ticks after it
   m.selfLimits.ram = 1; wait(5)
-  print("10 setting off = no self-restart:", selfReasons.isEmpty ? "PASS" : "FAIL")
+  print("10 setting off = no self-restart:", selfReasons.isEmpty ? "PASS" : "FAIL", selfReasons)
   d.removeObject(forKey: "selfRestartedAt")
   d.removeObject(forKey: "watched")
 }}

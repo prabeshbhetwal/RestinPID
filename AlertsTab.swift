@@ -20,7 +20,7 @@ struct AlertsTab: View {
             } header: {
                 Text("When an app stops responding")
             } footer: {
-                Text("The badge and count stay until the app recovers. The glow pulses and the icon shakes until you open the panel. With Reduce Motion on in System Settings, the glow holds steady and nothing moves. The number under each preview is the alert’s contrast on that menu bar.")
+                Text("The badge and count stay until the app recovers. The glow pulses and the icon jiggles until you open the panel, for up to 10 minutes. With Reduce Motion on in System Settings, the glow holds steady and nothing moves. The ratio under each preview is the contrast between the alert colour and that menu bar. Higher is easier to see.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -39,7 +39,7 @@ struct AlertsTab: View {
                     .disabled(!settings.pulse)
             }
             Section("Jiggle") {
-                Toggle("Shake the icon, like a Dock icon asking for attention", isOn: $settings.jiggle)
+                Toggle("Jiggle the icon, like a Dock icon asking for attention", isOn: $settings.jiggle)
                 Group {
                     LimitSlider(title: "Strength", value: $settings.jiggleStrength, range: 2...10, step: 1,
                                 low: "Gentle", high: "Strong") { "\(Int($0)) pt" }

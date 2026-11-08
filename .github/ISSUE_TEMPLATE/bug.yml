@@ -1,4 +1,4 @@
-name: Report a problem
+name: Report a Problem
 description: Something in RestinPID doesn't work as expected.
 labels: [bug]
 body:
@@ -14,4 +14,4 @@ body:
     attributes:
       label: Versions
       description: Filled in by the app's Send Feedback window, or from About RestinPID.
-      placeholder: RestinPID 3.0 (4) · macOS 15.1 · Apple silicon
+      placeholder: RestinPID 3.7 (11) · macOS 15.1 · Apple silicon
