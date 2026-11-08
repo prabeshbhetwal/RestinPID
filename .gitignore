@@ -1,6 +1,24 @@
+# Build output
 .build/
 .swiftpm/
 RestinPID.app/
-_trash/
 releases/
+*.dSYM/
+xcuserdata/
+DerivedData/
+
+# Signing material: never commit
+*.p12
+*.cer
+*.pem
+*.key
+*.mobileprovision
+.env*
+
+# Local tools and scratch
+_trash/
+.claude/
+.codegraph/
+graphify-out/
+.remember/
 .DS_Store
