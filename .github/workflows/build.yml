@@ -1,0 +1,18 @@
+name: Build
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (universal, release)
+        run: swift build -c release --arch arm64 --arch x86_64
+      - name: Compile the self-test and icon check
+        run: |
+          xcrun swiftc -swift-version 5 -parse-as-library Model.swift Hotkey.swift selftest/logic.swift -o /tmp/logic
+          xcrun swiftc -parse-as-library Icon.swift MenuBarAlert.swift selftest/icon-check.swift -o /tmp/icon-check

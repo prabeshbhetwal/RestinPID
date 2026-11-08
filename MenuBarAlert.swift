@@ -53,19 +53,20 @@ final class AlertSettings: ObservableObject {
 
     func alertImage(count: Int) -> NSImage {
         Tombstone.alertImage(size: iconSize, colour: colour, solid: solidBadge, count: showCount ? count : nil,
-                             label: count == 1 ? "RestinPID – an app is not responding"
-                                 : "RestinPID – \(count) apps are not responding")
+                             label: count == 1 ? "RestinPID: an app is not responding"
+                                 : "RestinPID: \(count) apps are not responding")
     }
 }
 
 /// Draws the status item and runs the alert: colour badge + count (always), glow pulse and jiggle
-/// (until the panel is opened). With Reduce Motion the glow holds steady and nothing moves.
+/// (until the panel is opened, or for 10 minutes). With Reduce Motion the glow holds steady and nothing moves.
 final class MenuBarIcon {
     private let button: NSStatusBarButton
     private let settings = AlertSettings.shared
     private var frozen = 0, update = false, previewing = false
     private var acknowledged = true
     private var jiggleTimer: Timer?
+    private var calmDown: DispatchWorkItem?
     private var subscription: AnyCancellable?
 
     init(button: NSStatusBarButton) {
@@ -84,7 +85,14 @@ final class MenuBarIcon {
     func show(frozen: Int, update: Bool, newlyFrozen: Bool) {
         self.frozen = frozen
         self.update = update
-        if newlyFrozen { acknowledged = false }
+        if newlyFrozen {
+            acknowledged = false
+            // Motion costs energy and nags; after 10 minutes the badge stays but stops moving.
+            calmDown?.cancel()
+            let item = DispatchWorkItem { [weak self] in self?.acknowledge() }
+            calmDown = item
+            DispatchQueue.main.asyncAfter(deadline: .now() + 600, execute: item)
+        }
         if frozen == 0 { acknowledged = true }
         refresh(restartMotion: newlyFrozen)
     }
@@ -107,7 +115,7 @@ final class MenuBarIcon {
     private func refresh(restartMotion: Bool) {
         let count = previewing ? max(frozen, 1) : frozen
         let size = CGFloat(settings.iconSize)
-        let calm = Tombstone.menuBarImage(size: size, label: update ? "RestinPID – update available" : "RestinPID")
+        let calm = Tombstone.menuBarImage(size: size, label: update ? "RestinPID: update available" : "RestinPID")
         button.image = count > 0 ? settings.alertImage(count: count) : update ? badged(calm) : calm
         button.contentTintColor = nil // a tint on the template is what went black; colour lives in the image
 

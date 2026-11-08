@@ -1,4 +1,4 @@
-name: Suggest a feature
+name: Suggest a Feature
 description: An idea that would make RestinPID better.
 labels: [enhancement]
 body:
@@ -12,4 +12,5 @@ body:
     id: system
     attributes:
       label: Versions
-      placeholder: RestinPID 3.0 (4) · macOS 15.1 · Apple silicon
+      description: Filled in by the app's Send Feedback window, or from About RestinPID.
+      placeholder: RestinPID 3.7 (11) · macOS 15.1 · Apple silicon

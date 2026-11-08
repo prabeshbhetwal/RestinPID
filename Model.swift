@@ -159,7 +159,7 @@ final class AppModel: ObservableObject {
         pinned = Set(defaults.stringArray(forKey: "pinned") ?? [])
         watched = Set(defaults.stringArray(forKey: "watched") ?? [])
         frozenThreshold = defaults.object(forKey: "frozenThreshold") as? Double ?? 15
-        confirmActions = defaults.object(forKey: "confirmActions") as? Bool ?? false
+        confirmActions = defaults.object(forKey: "confirmActions") as? Bool ?? true // a click restarts; ask unless turned off
         showMemory = defaults.object(forKey: "showMemory") as? Bool ?? true
         appearance = AppearanceMode(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         selfHeal = defaults.object(forKey: "selfHeal") as? Bool ?? true
@@ -187,12 +187,13 @@ final class AppModel: ObservableObject {
     private static func migrateOldSettings() {
         let defaults = UserDefaults.standard
         guard !defaults.bool(forKey: "migratedFromAppRestarter") else { return }
-        defaults.set(true, forKey: "migratedFromAppRestarter")
-        guard let old = defaults.persistentDomain(forName: "com.prabeshbhetwal.AppRestarter") else { return }
-        for key in ["excluded", "pinned", "watched", "frozenThreshold", "confirmActions", "showMemory", "notify", "hotkey", "history"]
-        where defaults.object(forKey: key) == nil {
-            if let value = old[key] { defaults.set(value, forKey: key) }
+        if let old = defaults.persistentDomain(forName: "com.prabeshbhetwal.AppRestarter") {
+            for key in ["excluded", "pinned", "watched", "frozenThreshold", "confirmActions", "showMemory", "notify", "hotkey", "history"]
+            where defaults.object(forKey: key) == nil {
+                if let value = old[key] { defaults.set(value, forKey: key) }
+            }
         }
+        defaults.set(true, forKey: "migratedFromAppRestarter") // after the copy, so a crash mid-copy retries
     }
 
     func start() {
@@ -201,6 +202,7 @@ final class AppModel: ObservableObject {
         }
         // Memory + frozen state + watchdog. ponytail: fixed 3 s poll; event-driven would need private APIs.
         timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in self?.pollStatus() }
+        timer?.tolerance = 1 // lets macOS batch wake-ups with other timers (energy)
         // Re-check Accessibility the moment the user flips it in System Settings (macOS posts this
         // when the trusted list changes; the value lags slightly), and whenever we come forward.
         DistributedNotificationCenter.default().addObserver(
@@ -244,7 +246,7 @@ final class AppModel: ObservableObject {
     private func startSelfWatch() {
         let started = monotonicNanos()
         let timer = DispatchSource.makeTimerSource(queue: watchQueue)
-        timer.schedule(deadline: .now() + 2, repeating: 2)
+        timer.schedule(deadline: .now() + 2, repeating: 2, leeway: .seconds(1))
         timer.setEventHandler { [weak self] in self?.selfWatchTick(started: started) }
         timer.resume()
         watchTimer = timer
@@ -356,11 +358,15 @@ final class AppModel: ObservableObject {
     /// Never listed: killing these logs you out or breaks password prompts.
     private static let neverList: Set<String> = ["com.apple.loginwindow", "com.apple.SecurityAgent"]
 
-    /// nil = not listable: no bundle, this app, a helper inside another app (counted toward
-    /// that app), or a command-line tool.
+    /// Never restarted automatically, even when watched: killing them mid-job can damage a disk,
+    /// an install or a migration. A person can still restart them by hand.
+    static let neverAutoRestart: Set<String> = ["com.apple.installer", "com.apple.DiskUtility", "com.apple.MigrateAssistant"]
+
+    /// nil = not listable: no bundle, this app (or another copy of it), a helper inside another
+    /// app (counted toward that app), or a command-line tool.
     static func kind(of app: NSRunningApplication) -> AppKind? {
         guard app.processIdentifier != getpid(), !app.isTerminated,
-              let id = app.bundleIdentifier, !neverList.contains(id),
+              let id = app.bundleIdentifier, !neverList.contains(id), id != Bundle.main.bundleIdentifier,
               let path = app.bundleURL?.path, path.hasSuffix(".app"),
               !path.dropLast(4).contains(".app/") else { return nil }
         if isApple(app, path: path) { return .system }
@@ -452,7 +458,8 @@ final class AppModel: ObservableObject {
             guard item.frozen else { frozenSince[item.id] = nil; continue }
             let since = frozenSince[item.id] ?? now
             frozenSince[item.id] = since
-            if watched.contains(item.bundleID), now.timeIntervalSince(since) >= frozenThreshold, !busy.contains(item.id) {
+            if watched.contains(item.bundleID), !Self.neverAutoRestart.contains(item.bundleID),
+               now.timeIntervalSince(since) >= frozenThreshold, !busy.contains(item.id) {
                 run(.restart, on: [item], automatic: true)
             }
         }
@@ -491,6 +498,7 @@ final class AppModel: ObservableObject {
                 DispatchQueue.main.async {
                     self.busy.remove(app.processIdentifier)
                     self.record(action, name: name, ok: ok, automatic: automatic)
+                    if !ok, !automatic { self.showFailure(action, name: name) } // a click that silently did nothing reads as a bug
                 }
             }
         }
@@ -507,6 +515,16 @@ final class AppModel: ObservableObject {
                            : "Couldn’t \(action.verb.lowercased()) \(name)"
         if automatic { content.body = note ?? "\(name) was not responding for \(Int(frozenThreshold)) seconds." }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+    }
+
+    private func showFailure(_ action: AppAction, name: String) {
+        let alert = NSAlert()
+        alert.messageText = "Couldn’t \(action.verb.lowercased()) \(name)"
+        alert.informativeText = action == .restart
+            ? "\(name) may still be running, or it quit and didn’t open again. Try again, or open it from the Dock or Applications."
+            : "\(name) is still running. If it belongs to another user, the admin password is needed. You can also try Activity Monitor."
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     func clearHistory() {
@@ -604,27 +622,44 @@ final class AppModel: ObservableObject {
 // MARK: - Process helpers
 
 /// Force terminate, then SIGKILL (cannot be ignored, works on frozen apps), then admin kill if owned by another user.
+/// The PID is checked against the process's start time before each kill, so a PID the app freed
+/// and macOS handed to another process is never killed.
 func forceKill(_ app: NSRunningApplication) -> Bool {
     let pid = app.processIdentifier
+    guard let born = startTime(pid) else { return true } // already gone
     app.forceTerminate()
-    if kill(pid, SIGKILL) != 0 && errno == EPERM { adminKill(pid) }
-    for _ in 0..<50 where isAlive(pid) { usleep(100_000) } // up to 5 s
-    return !isAlive(pid)
+    if startTime(pid) == born, kill(pid, SIGKILL) != 0, errno == EPERM { adminKill(pid, born: born) }
+    for _ in 0..<50 where startTime(pid) == born { usleep(100_000) } // up to 5 s
+    return startTime(pid) != born
 }
 
+/// Opens the app again, retrying while LaunchServices still thinks the old copy is running.
 func relaunch(_ url: URL) -> Bool {
-    usleep(300_000) // let LaunchServices notice the old process is gone
-    let done = DispatchSemaphore(value: 0)
-    var ok = false
-    let config = NSWorkspace.OpenConfiguration()
-    config.activates = true
-    NSWorkspace.shared.openApplication(at: url, configuration: config) { app, error in
-        ok = app != nil
-        if let error { NSLog("RestinPID: relaunch failed: \(error)") }
-        done.signal()
+    for delay in [0.3, 1.0, 3.0] {
+        usleep(useconds_t(delay * 1_000_000))
+        let done = DispatchSemaphore(value: 0)
+        var ok = false
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = true
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { app, error in
+            ok = app != nil
+            if let error { NSLog("RestinPID: relaunch failed: \(error)") }
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + 15)
+        if ok { return true }
     }
-    _ = done.wait(timeout: .now() + 15)
-    return ok
+    return false
+}
+
+/// When the process started (µs since 1970), or nil if it's gone. Two processes that share a PID
+/// over time never share this. sysctl works for every user's processes, like ps.
+func startTime(_ pid: pid_t) -> UInt64? {
+    var info = kinfo_proc(), size = MemoryLayout<kinfo_proc>.stride
+    var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+    guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0, info.kp_proc.p_pid == pid else { return nil }
+    let t = info.kp_proc.p_starttime
+    return UInt64(t.tv_sec) * 1_000_000 + UInt64(t.tv_usec)
 }
 
 /// Quits and reopens RestinPID. A helper shell waits for this process to exit, then opens the app
@@ -634,7 +669,10 @@ func relaunchSelf(hard: Bool = false) {
     task.executableURL = URL(fileURLWithPath: "/bin/sh")
     task.arguments = ["-c", "while kill -0 $1 2>/dev/null; do sleep 0.2; done; /usr/bin/open \"$0\"",
                       Bundle.main.bundleURL.path, String(getpid())]
-    try? task.run()
+    do { try task.run() } catch {
+        NSLog("RestinPID: couldn't start the relaunch helper, staying open: \(error)") // quitting now would leave us dead
+        return
+    }
     if hard {
         UserDefaults.standard.synchronize() // about to be killed; flush settings first
         kill(getpid(), SIGKILL)
@@ -647,12 +685,34 @@ func isAlive(_ pid: pid_t) -> Bool {
     kill(pid, 0) == 0 || errno == EPERM
 }
 
-func adminKill(_ pid: pid_t) {
+/// Kills a process owned by another user, as root, after the admin password prompt. The prompt can
+/// stay open for minutes, so the root shell re-checks the start time (as ps prints it) and only
+/// kills the same process.
+func adminKill(_ pid: pid_t, born: UInt64) {
+    guard let stamp = psStart(pid), startTime(pid) == born else { return }
+    let shell = "[ \"$(LC_ALL=C /bin/ps -p \(pid) -o lstart=)\" = \"\(stamp)\" ] && /bin/kill -9 \(pid)"
+    let script = shell.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
     let task = Process()
     task.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-    task.arguments = ["-e", "do shell script \"kill -9 \(pid)\" with administrator privileges"]
+    task.arguments = ["-e", "do shell script \"\(script)\" with administrator privileges"]
     try? task.run()
     task.waitUntilExit()
+}
+
+/// ps's start time for a process, e.g. "Sat Nov  8 09:40:12 2026". Only letters, digits, spaces
+/// and colons, so it's safe to put in the root shell command.
+private func psStart(_ pid: pid_t) -> String? {
+    let task = Process(), pipe = Pipe()
+    task.executableURL = URL(fileURLWithPath: "/bin/ps")
+    task.arguments = ["-p", String(pid), "-o", "lstart="]
+    task.environment = ["LC_ALL": "C"]
+    task.standardOutput = pipe
+    guard (try? task.run()) != nil else { return nil }
+    task.waitUntilExit()
+    let out = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        .trimmingCharacters(in: .newlines)
+    let safe = !out.isEmpty && out.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == " " || $0 == ":") }
+    return task.terminationStatus == 0 && safe ? out : nil
 }
 
 /// Pings the app's main thread through Accessibility. true = answered; false = no answer

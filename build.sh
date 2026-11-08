@@ -21,14 +21,31 @@ cp "$BIN/RestinPID" "$STAGE/Contents/MacOS/RestinPID"
 cp Info.plist "$STAGE/Contents/Info.plist"
 cp AppIcon.icns "$STAGE/Contents/Resources/AppIcon.icns"
 ditto "$BIN/Sparkle.framework" "$STAGE/Contents/Frameworks/Sparkle.framework"
+# Licences travel with the app: RestinPID's own, and Sparkle's (MIT asks for its notice in every copy).
+cp LICENSE "$STAGE/Contents/Resources/LICENSE.txt"
+cp .build/artifacts/sparkle/Sparkle/LICENSE "$STAGE/Contents/Resources/Sparkle-LICENSE.txt"
 
 # Sign + verify in the temp folder: the Desktop re-adds Finder attributes that break signatures.
 # A stable identity keeps users' Accessibility permission across updates (ad-hoc changes every build).
-# Override with SIGN_IDENTITY="Developer ID Application: …" once enrolled; falls back to ad-hoc.
+# SIGN_IDENTITY="Developer ID Application: …" turns on the hardened runtime and a secure timestamp,
+# which notarisation needs. REQUIRE_IDENTITY=1 (release.sh sets it) fails instead of signing ad-hoc.
 xattr -cr "$STAGE"
 IDENTITY="${SIGN_IDENTITY:-AppRestarter Code Signing}" # keychain name of the existing certificate
-security find-identity -p codesigning | grep -q "$IDENTITY" || { echo "warning: '$IDENTITY' not found, signing ad-hoc"; IDENTITY=-; }
-codesign --force --deep --sign "$IDENTITY" "$STAGE"
+if ! security find-identity -p codesigning | grep -q "$IDENTITY"; then
+  [ "$REQUIRE_IDENTITY" = 1 ] && { echo "error: signing identity '$IDENTITY' not found"; exit 1; }
+  echo "warning: '$IDENTITY' not found, signing ad-hoc"; IDENTITY=-
+fi
+case "$IDENTITY" in
+  "Developer ID Application"*) OPTS="--options runtime --timestamp" ;;
+  *) OPTS="" ;;
+esac
+# Inside out, without --deep: Sparkle's helpers first, then the framework, then the app.
+SPARKLE="$STAGE/Contents/Frameworks/Sparkle.framework"
+for item in "$SPARKLE/Versions/B/XPCServices/Installer.xpc" "$SPARKLE/Versions/B/XPCServices/Downloader.xpc" \
+            "$SPARKLE/Versions/B/Autoupdate" "$SPARKLE/Versions/B/Updater.app" "$SPARKLE"; do
+  codesign --force --sign "$IDENTITY" $OPTS --preserve-metadata=entitlements "$item"
+done
+codesign --force --sign "$IDENTITY" $OPTS "$STAGE"
 codesign --verify --deep --strict "$STAGE"
 
 # OUT=<dir> puts the app elsewhere (release.sh zips from a clean temp copy).
