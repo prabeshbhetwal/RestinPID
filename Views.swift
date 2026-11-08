@@ -973,7 +973,7 @@ struct FeedbackView: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            Text("Opens a pre-filled issue in your browser; nothing is sent until you submit it there. Needs a free GitHub account. Issues are public on GitHub.")
+            Text("Opens a pre-filled issue in your browser; nothing is sent until you submit it there. Needs a free GitHub account. Issues are public, so leave out names, emails and file paths.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

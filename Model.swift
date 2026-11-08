@@ -498,6 +498,7 @@ final class AppModel: ObservableObject {
                 DispatchQueue.main.async {
                     self.busy.remove(app.processIdentifier)
                     self.record(action, name: name, ok: ok, automatic: automatic)
+                    if !ok, !automatic { self.showFailure(action, name: name) } // a click that silently did nothing reads as a bug
                 }
             }
         }
@@ -514,6 +515,16 @@ final class AppModel: ObservableObject {
                            : "Couldn’t \(action.verb.lowercased()) \(name)"
         if automatic { content.body = note ?? "\(name) was not responding for \(Int(frozenThreshold)) seconds." }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+    }
+
+    private func showFailure(_ action: AppAction, name: String) {
+        let alert = NSAlert()
+        alert.messageText = "Couldn’t \(action.verb.lowercased()) \(name)"
+        alert.informativeText = action == .restart
+            ? "\(name) may still be running, or it quit and didn’t open again. Try again, or open it from the Dock or Applications."
+            : "\(name) is still running. If it belongs to another user, the admin password is needed. You can also try Activity Monitor."
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     func clearHistory() {
