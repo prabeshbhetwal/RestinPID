@@ -11,19 +11,37 @@ struct PanelView: View {
     let showAbout: () -> Void
     let sendFeedback: () -> Void
     @FocusState private var searchFocused: Bool
+    /// The update banner sits above the rows, so it waits for the layout hold like a new row would.
+    @State private var bannerVersion: String?
 
     var body: some View {
         let items = model.visible
         VStack(spacing: 0) {
             header
             Divider()
-            if let version = model.availableUpdate { updateBanner(version) }
+            if let version = bannerVersion { updateBanner(version) }
             if items.isEmpty { emptyState } else { list(items) }
             Divider()
             footer(items)
         }
         .frame(width: 360)
-        .onAppear { searchFocused = true }
+        // Rows hold still while the pointer is anywhere over the panel (footer included, so it can't jump either).
+        .onHover { model.setPointerOverPanel($0) }
+        .onAppear {
+            searchFocused = true
+            bannerVersion = model.availableUpdate
+            model.layoutChangedAt = ProcessInfo.processInfo.systemUptime // a panel that just opened under the pointer
+        }
+        .onDisappear { model.setPointerOverPanel(false) }
+        .onChange(of: model.availableUpdate) { if !model.layoutHold.isOn { bannerVersion = $0 } }
+        .onChange(of: model.layoutHold.isOn) { if !$0 { bannerVersion = model.availableUpdate } }
+        // Click protection: note every time the rows move on screen.
+        .onChange(of: layoutKey(items)) { _ in model.layoutChangedAt = ProcessInfo.processInfo.systemUptime }
+    }
+
+    /// What decides where each row is drawn: order, group and the banner above them.
+    private func layoutKey(_ items: [AppItem]) -> [String] {
+        items.map { "\($0.id)\(model.inAttentionGroup($0) ? "!" : "")" } + [bannerVersion ?? ""]
     }
 
     private var header: some View {
@@ -86,8 +104,8 @@ struct PanelView: View {
     }
 
     private func list(_ items: [AppItem]) -> some View {
-        let attention = items.filter(model.needsAttention)
-        let rest = items.filter { !model.needsAttention($0) }
+        let attention = items.filter(model.inAttentionGroup)
+        let rest = items.filter { !model.inAttentionGroup($0) }
         let pinned = rest.filter { model.pinned.contains($0.bundleID) }
         let others = rest.filter { !model.pinned.contains($0.bundleID) }
         let attentionGroup = ("Needs Attention", attention)
@@ -144,7 +162,8 @@ struct PanelView: View {
     }
 
     private func footer(_ items: [AppItem]) -> some View {
-        let items = items.filter { $0.kind != .system } // never bulk-kill macOS's own apps
+        let items = items.filter { $0.kind != .system && !$0.app.isTerminated } // never bulk-kill macOS's own apps
+        let waiting = model.waitingForAttention
         return HStack(spacing: 4) {
             Button { model.perform(.restart, on: items) } label: { Label("Restart All", systemImage: "arrow.clockwise") }
                 .buttonStyle(HoverPillStyle(tint: .accentColor))
@@ -155,6 +174,14 @@ struct PanelView: View {
                 .help("Force quit every app in the list except macOS apps")
                 .disabled(items.isEmpty)
             Spacer()
+            if !waiting.isEmpty {
+                // Room is already there (the Spacer), so this appears without moving anything.
+                Label("\(waiting.count)", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .help("\(waiting.map(\.name).joined(separator: ", ")) \(waiting.count == 1 ? "needs" : "need") attention. The list holds still while your pointer is over it; move the pointer away to update it.")
+                    .accessibilityLabel("\(waiting.count) more \(waiting.count == 1 ? "app needs" : "apps need") attention. Move the pointer away from the panel to show them.")
+            }
             Button { NSApp.terminate(nil) } label: { Label("Quit", systemImage: "power") }
                 .buttonStyle(HoverPillStyle(tint: .primary))
                 .help("Quit RestinPID (⌘Q)")
@@ -190,6 +217,13 @@ private struct AppRow: View {
     private var busy: Bool { model.busy.contains(item.id) }
     private var isPinned: Bool { model.pinned.contains(item.bundleID) }
     private var isWatched: Bool { model.watched.contains(item.bundleID) }
+    /// Its app quit while the layout was held: the row stays, dimmed, so the rows below don't slide up.
+    private var gone: Bool { item.app.isTerminated }
+
+    /// Pointer clicks only. A click right after the rows moved was aimed at the old layout: dropped, with a beep.
+    private func click(_ run: @escaping () -> Void) -> () -> Void {
+        { if model.clickIsSafe() { run() } else { NSSound.beep() } }
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -199,7 +233,14 @@ private struct AppRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(item.name).lineLimit(1).truncationMode(.tail)
-                    if item.frozen {
+                    if gone {
+                        Text("Closed")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .help("This app has quit. Its row goes when your pointer leaves the panel.")
+                    } else if item.frozen {
                         Text("Not Responding")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.red)
@@ -221,13 +262,14 @@ private struct AppRow: View {
             Spacer(minLength: 4)
             if busy {
                 ProgressView().controlSize(.small)
+            } else if gone {
+                EmptyView()
             } else if hovering || selected {
-                RowButton(symbol: "arrow.clockwise", label: "Restart", tint: .accentColor) { model.perform(.restart, on: [item]) }
-                RowButton(symbol: "xmark.octagon", label: "Force Quit", tint: .red) { model.perform(.forceQuit, on: [item]) }
+                RowButton(symbol: "arrow.clockwise", label: "Restart", tint: .accentColor, action: click { model.perform(.restart, on: [item]) })
+                RowButton(symbol: "xmark.octagon", label: "Force Quit", tint: .red, action: click { model.perform(.forceQuit, on: [item]) })
                 // A plain button (same look as its neighbours) that pops up the hide choices.
-                RowButton(symbol: "eye.slash", label: "Hide from the list: for a while, until it restarts, or always", tint: .orange) {
-                    popUpHideMenu(model: model, item: item)
-                }
+                RowButton(symbol: "eye.slash", label: "Hide from the list: for a while, until it restarts, or always", tint: .orange,
+                          action: click { popUpHideMenu(model: model, item: item) })
             } else if isPinned {
                 Image(systemName: "pin.fill").font(.caption).foregroundStyle(.secondary)
             }
@@ -243,10 +285,11 @@ private struct AppRow: View {
             hovering = inside
             if inside { model.selection = item.id }
         }
-        .onTapGesture { model.perform(.restart, on: [item]) }
+        .opacity(gone ? 0.45 : 1)
+        .onTapGesture(perform: click { model.perform(.restart, on: [item]) })
         .contextMenu {
-            Button("Restart") { model.perform(.restart, on: [item]) }
-            Button("Force Quit") { model.perform(.forceQuit, on: [item]) }
+            Button("Restart \(item.name)") { model.perform(.restart, on: [item]) }
+            Button("Force Quit \(item.name)") { model.perform(.forceQuit, on: [item]) }
             Divider()
             Button(isPinned ? "Unpin" : "Pin to Top") { model.togglePin(item.bundleID) }
             Button(isWatched ? "Stop Auto-Restarting When Frozen" : "Auto-Restart When Frozen") { model.toggleWatch(item.bundleID) }

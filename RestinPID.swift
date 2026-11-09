@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private let model = AppModel.shared
     private lazy var updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: self)
     private var statusItem: NSStatusItem!
+    private var readingWidth: (scope: UsageScope, width: CGFloat) = (.off, 0)
     private let popover = NSPopover()
     private var settingsWindow: NSWindow?
     private var feedbackWindow: NSWindow?
@@ -112,12 +113,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         guard let reading, reading.memory > 0 else {
             button.attributedTitle = NSAttributedString()
             button.toolTip = nil
+            readingWidth = (model.menuBarUsage, 0)
+            statusItem.length = NSStatusItem.variableLength
             return
         }
         let text = " " + formatBytes(reading.memory) + (reading.cpu.map { "  " + formatCPU($0) } ?? "")
         button.attributedTitle = NSAttributedString(string: text, attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular),
         ])
+        // The reading's width only grows (until its setting changes), so "980 MB" becoming "1.02 GB"
+        // doesn't shuffle the menu bar items to its left every few seconds.
+        let floor = readingWidth.scope == model.menuBarUsage ? readingWidth.width : 0
+        readingWidth = (model.menuBarUsage, max(floor, button.intrinsicContentSize.width))
+        statusItem.length = readingWidth.width
         button.toolTip = model.menuBarUsage == .system
             ? "Whole Mac: memory used and CPU load"
             : "Apps in the list: total RAM and CPU (100% = one core)"

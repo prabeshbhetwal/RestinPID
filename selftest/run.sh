@@ -13,6 +13,6 @@ cat > "$A/Contents/Info.plist" <<'EOF'
 <key>CFBundleExecutable</key><string>Dummy</string><key>CFBundleIdentifier</key><string>com.test.ARDummy</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleName</key><string>Dummy</string></dict></plist>
 EOF
 codesign -f -s - "$A"
-xcrun swiftc -swift-version 5 -parse-as-library Model.swift Hotkey.swift selftest/logic.swift -o "$T/logic"
+xcrun swiftc -swift-version 5 -parse-as-library Model.swift LayoutHold.swift Hotkey.swift selftest/logic.swift -o "$T/logic"
 "$T/logic" "$A" | tee "$T/out.txt"
 ! grep -q FAIL "$T/out.txt"

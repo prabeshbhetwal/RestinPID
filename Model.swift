@@ -79,12 +79,16 @@ final class AppModel: ObservableObject {
     @Published private(set) var all: [AppItem] = []
     @Published private(set) var busy: Set<pid_t> = []
     @Published private(set) var accessibilityTrusted = AXIsProcessTrusted()
-    @Published var query = "" { didSet { selection = visible.first?.id } }
+    @Published var query = "" { didSet { reholdLayout(); selection = visible.first?.id } }
     @Published var selection: pid_t?
+    /// Rows stay put while the pointer is over the panel. See LayoutHold.swift.
+    @Published private(set) var layoutHold = LayoutHold()
+    /// When the rows last changed on screen (uptime), for click protection.
+    var layoutChangedAt: TimeInterval = 0
 
     // Settings (persisted)
-    @Published var excluded: Set<String> { didSet { saveSet(excluded, "excluded"); rebuild() } }
-    @Published var pinned: Set<String> { didSet { saveSet(pinned, "pinned") } }
+    @Published var excluded: Set<String> { didSet { saveSet(excluded, "excluded"); rebuild(); reholdLayout() } }
+    @Published var pinned: Set<String> { didSet { saveSet(pinned, "pinned"); reholdLayout() } }
     @Published var watched: Set<String> { didSet { saveSet(watched, "watched") } }
     @Published var frozenThreshold: Double { didSet { defaults.set(frozenThreshold, forKey: "frozenThreshold") } }
     @Published var confirmActions: Bool { didSet { defaults.set(confirmActions, forKey: "confirmActions") } }
@@ -299,7 +303,12 @@ final class AppModel: ObservableObject {
 
     // MARK: List
 
+    /// The rows as drawn: held in place while the pointer is over the panel, live otherwise.
     var visible: [AppItem] {
+        layoutHold.isOn ? layoutHold.rows(updatedFrom: all) : liveVisible
+    }
+
+    private var liveVisible: [AppItem] {
         let q = query.trimmingCharacters(in: .whitespaces)
         return all
             .filter { isShown($0) && (q.isEmpty || $0.name.localizedCaseInsensitiveContains(q)) }
@@ -310,6 +319,36 @@ final class AppModel: ObservableObject {
     private func rank(_ item: AppItem) -> (Int, Int, String) {
         let section = needsAttention(item) ? (attentionOnTop ? 0 : 3) : pinned.contains(item.bundleID) ? 1 : 2
         return (section, item.kind.rawValue, item.name.lowercased())
+    }
+
+    /// The group a row is drawn in. While the layout is held, a row keeps the group it had.
+    func inAttentionGroup(_ item: AppItem) -> Bool {
+        layoutHold.isOn ? layoutHold.inAttentionGroup(item.id) : needsAttention(item)
+    }
+
+    /// Apps that need attention but wait for the pointer to leave before they get a row.
+    var waitingForAttention: [AppItem] {
+        guard layoutHold.isOn else { return [] }
+        return liveVisible.filter { needsAttention($0) && !layoutHold.contains($0.id) }
+    }
+
+    /// The panel reports the pointer entering and leaving it.
+    func setPointerOverPanel(_ inside: Bool) {
+        guard inside != layoutHold.isOn else { return }
+        if inside { layoutHold.begin(liveVisible, attention: needsAttention) } else { layoutHold.end() }
+        if selection == nil || !visible.contains(where: { $0.id == selection }) { selection = visible.first?.id }
+    }
+
+    /// The person changed the list themselves (search, pin, hide): show it now, then hold again.
+    private func reholdLayout() {
+        guard layoutHold.isOn else { return }
+        layoutHold.end()
+        layoutHold.begin(liveVisible, attention: needsAttention)
+    }
+
+    /// Click protection: false for a click that came right after the rows moved, aimed at the old layout.
+    func clickIsSafe() -> Bool {
+        ProcessInfo.processInfo.systemUptime - layoutChangedAt >= clickGuardInterval
     }
 
     /// Frozen apps, and macOS apps that are only listed because they're busy.
@@ -469,7 +508,7 @@ final class AppModel: ObservableObject {
 
     /// User-triggered. Bulk actions and macOS apps always ask; others ask if the setting is on.
     func perform(_ action: AppAction, on items: [AppItem]) {
-        let items = items.filter { !busy.contains($0.id) }
+        let items = items.filter { !busy.contains($0.id) && !$0.app.isTerminated } // a held row can outlive its app
         guard !items.isEmpty else { return }
         let system = items.contains { $0.kind == .system }
         if items.count > 1 || confirmActions || system {
@@ -570,12 +609,14 @@ final class AppModel: ObservableObject {
         case .untilRestart: hiddenRun[item.bundleID] = item.id
         case .always: excluded.insert(item.bundleID)
         }
+        reholdLayout()
         if selection == item.id { selection = visible.first?.id }
     }
 
     func showAgain(_ bundleID: String) {
         hiddenUntil[bundleID] = nil
         hiddenRun[bundleID] = nil
+        reholdLayout()
     }
 
     /// Drop timed hides that ran out and run hides whose process has quit.

@@ -16,9 +16,19 @@ import AppKit
   guard let a = te() else { print("FAIL: copy not listed"); exit(1) }
   print("1 listed from /tmp: PASS")
   // Watchdog: freeze, expect auto-restart after >= 5 s
+  // Layout hold: pointer over the panel, so the app freezing below must not move any row
+  m.setPointerOverPanel(true)
+  let heldIDs = m.visible.map(\.id)
   let oldPid = a.id; kill(oldPid, SIGSTOP)
   for _ in 0..<40 where te()?.frozen != true { wait(0.5) } // two missed pings; latency varies by macOS version
   print("2 frozen badge:", te()?.frozen == true ? "PASS" : "FAIL")
+  let unmoved = m.visible.map(\.id) == heldIDs
+  let parked = heldIDs.contains(oldPid) ? !m.inAttentionGroup(te()!) : m.waitingForAttention.contains { $0.id == oldPid }
+  m.setPointerOverPanel(false)
+  print("19 rows hold still under the pointer:", unmoved && parked && m.visible.first?.id == oldPid ? "PASS" : "FAIL",
+        "unmoved=\(unmoved) parked=\(parked)")
+  m.layoutChangedAt = ProcessInfo.processInfo.systemUptime; let blocked = !m.clickIsSafe()
+  m.layoutChangedAt -= clickGuardInterval; print("20 click guard:", blocked && m.clickIsSafe() ? "PASS" : "FAIL")
   // Needs Attention: on top by default, after every calm app when set to the bottom
   let onTop = m.visible.first?.bundleID == "com.test.ARDummy"
   m.attentionOnTop = false
