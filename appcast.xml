@@ -3,34 +3,32 @@
     <channel>
         <title>RestinPID</title>
         <item>
-            <title>3.8</title>
-            <pubDate>Sun, 08 Nov 2026 12:18:10 +1100</pubDate>
+            <title>3.9</title>
+            <pubDate>Tue, 10 Nov 2026 02:33:13 +1100</pubDate>
             <link>https://github.com/prabeshbhetwal/RestinPID/releases/latest</link>
             <sparkle:phasedRolloutInterval>86400</sparkle:phasedRolloutInterval>
             <sparkle:informationalUpdate>
                 <sparkle:belowVersion>4</sparkle:belowVersion>
             </sparkle:informationalUpdate>
-            <sparkle:version>12</sparkle:version>
-            <sparkle:shortVersionString>3.8</sparkle:shortVersionString>
+            <sparkle:version>13</sparkle:version>
+            <sparkle:shortVersionString>3.9</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>RestinPID 3.8</h2>
+            <description><![CDATA[<h2>RestinPID 3.9</h2>
 <ul>
-<li><b>Asks before it restarts or quits an app.</b> Unsaved work in that app is lost, so this is now on by default. Turn it off in Settings → General.</li>
-<li><b>Safer force quit:</b> RestinPID checks it is still the same app before quitting it, including after you type an admin password.</li>
-<li>If a restart or force quit fails, you now see a message saying so and what to try.</li>
-<li>Restart tries again if the app doesn't open the first time.</li>
-<li>Installer, Disk Utility and Migration Assistant are never restarted automatically.</li>
-<li>Uses less energy: the glow and jiggle stop after 10 minutes. The red icon stays until you open the panel.</li>
-<li>The app now includes its licence (MIT) and Sparkle's.</li>
+<li><b>The list holds still while you use it.</b> When an app stops responding, Needs Attention no longer pushes the other apps down under your pointer, so a click can't land on the wrong app. New apps wait until your pointer leaves the panel; an orange count at the bottom shows how many.</li>
+<li>An app that quits while your pointer is over the list keeps its row, dimmed and marked Closed, so the rows below don't jump up.</li>
+<li>A click right after the list changes is ignored (you'll hear a beep), because it was aimed at the old layout.</li>
+<li>The right-click menu names the app: "Force Quit Safari", not just "Force Quit".</li>
+<li>The menu bar icon keeps the same width when it shows a count, so the icons next to it don't shift.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.8/RestinPID-3.8.zip" length="2798495" type="application/octet-stream" sparkle:edSignature="wR0/6aHZ/UCNePrpU1oWrbDPYFm/f8pW7Y8NMUVEHG1JN63RswgjA77BCU1vt0wwoRUWJOjJsfb3sgbEcYe9Bw=="/>
+            <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.9/RestinPID-3.9.zip" length="2833713" type="application/octet-stream" sparkle:edSignature="R+NFL9cf+gDftdS/hQv0JULNSkr86BwMSZ7uCV+K/VDP0NcGhFdhxRyg51FKy99Yy23WWFRej7tK51GrAB7+Aw=="/>
             <sparkle:deltas>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.8/RestinPID12-11.delta" sparkle:deltaFrom="11" length="172350" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="/ZrsZ7Sv9Sk05oJJ1gQh5RYs5mVgUFEvyE2hohWzU7X1oRFEaMzzaAHfMVR+G2xidWsZ8/9Sh9JI+VQlNHPFBQ=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.8/RestinPID12-10.delta" sparkle:deltaFrom="10" length="930002" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="lko899Ul6oi97b1IcP15x7K+lq61FzAmhM+f63q6gRmMD2ZLLsnP0goK4VH6DfWsjwW2lO/4qIxogqJZbavBCw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.8/RestinPID12-9.delta" sparkle:deltaFrom="9" length="994314" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="wKwyx9QJlxfL+Ow2nHwc0Gp2/zhLSIFCJPx6QLnB3MNJO7YoFMtQuJ8nvmc74M5iVqXUnwrIG3jcKT60Gv+dDw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.8/RestinPID12-8.delta" sparkle:deltaFrom="8" length="997370" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="dkWm0lhhp5AqSxjEOLbV11ZAzQlBlwpruuVd8Qegi/QHcNXTS5opnUN2szZqokii3wpGTVwqkOEYl3OEPvd5Dw=="/>
-                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.8/RestinPID12-7.delta" sparkle:deltaFrom="7" length="1024910" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="zX60SmCcIHSlstnfREC2UESRxJ3rnkEu5N9YFwzL0WvImXSICUHZEw0XeWiWATXTCYw5RkaL+SBNN1+lMwQgDQ=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.9/RestinPID13-12.delta" sparkle:deltaFrom="12" length="235754" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Oc9oIDL88nCKuZQcNGF1T0iFG2YlSabLF8OyMN4tBmJCh0BGE6j0HtwQHmQUU5vx9DMAIk3xvUptubbFcmSpAw=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.9/RestinPID13-11.delta" sparkle:deltaFrom="11" length="268830" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Exb209ULeaLIOyhRJUVR3SVWGW1JVPJ+06W+xX6Rdu+T2hH3AdSFIdlQvZXw9yoa23uNzB03hqJ7BOMk600jDA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.9/RestinPID13-10.delta" sparkle:deltaFrom="10" length="994818" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="gVsQkdwSHXY5L/EAsrz7tSih3V29BrgOLORRZOoc6+5W6iHLqfJz80Et2c/jHhf5Yc4V9BtF7CwDY8lisp0WAA=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.9/RestinPID13-9.delta" sparkle:deltaFrom="9" length="1049938" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="0Wggx6flNuuS2vzhuZI0fi429PuZ2OdfXnyQfRsWsyctKOLrbdc38Ig6F8JQwkt9J/jB+mWb5TNj2qwm9qFBDQ=="/>
+                <enclosure url="https://github.com/prabeshbhetwal/RestinPID/releases/download/v3.9/RestinPID13-8.delta" sparkle:deltaFrom="8" length="1051062" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976336" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="GHxuxSyNr4ManTe2EFZ2e/J2B4lYHz/tYEmg0q9G9pEKK7w2wlss/fO8gamsviR6wC9qRzPk134bF/hWjzraAQ=="/>
             </sparkle:deltas>
         </item>
     </channel>
