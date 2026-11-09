@@ -14,5 +14,5 @@ jobs:
         run: swift build -c release --arch arm64 --arch x86_64
       - name: Compile the self-test and icon check
         run: |
-          xcrun swiftc -swift-version 5 -parse-as-library Model.swift Hotkey.swift selftest/logic.swift -o /tmp/logic
+          xcrun swiftc -swift-version 5 -parse-as-library Model.swift LayoutHold.swift Hotkey.swift selftest/logic.swift -o /tmp/logic
           xcrun swiftc -parse-as-library Icon.swift MenuBarAlert.swift selftest/icon-check.swift -o /tmp/icon-check

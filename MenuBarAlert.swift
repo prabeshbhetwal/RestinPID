@@ -116,7 +116,10 @@ final class MenuBarIcon {
         let count = previewing ? max(frozen, 1) : frozen
         let size = CGFloat(settings.iconSize)
         let calm = Tombstone.menuBarImage(size: size, label: update ? "RestinPID: update available" : "RestinPID")
-        button.image = count > 0 ? settings.alertImage(count: count) : update ? badged(calm) : calm
+        let image = count > 0 ? settings.alertImage(count: count) : update ? badged(calm) : calm
+        // One width, calm or alerting: an app freezing must not widen the icon and shove every menu bar
+        // item to its left (other apps' icons) out from under the pointer.
+        button.image = centred(image, width: settings.alertImage(count: 1).size.width)
         button.contentTintColor = nil // a tint on the template is what went black; colour lives in the image
 
         let moving = count > 0 && (previewing || !acknowledged)
@@ -173,6 +176,18 @@ final class MenuBarIcon {
     private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
     /// Calm icon with a dot cut into its top-right corner: an update is waiting. Stays a template.
+    /// `image` in the middle of a canvas `width` wide (the alert's width), so the status item never resizes.
+    private func centred(_ image: NSImage, width: CGFloat) -> NSImage {
+        guard image.size.width < width else { return image }
+        let canvas = NSImage(size: NSSize(width: width, height: image.size.height), flipped: false) { rect in
+            image.draw(in: NSRect(x: (rect.width - image.size.width) / 2, y: 0, width: image.size.width, height: image.size.height))
+            return true
+        }
+        canvas.isTemplate = image.isTemplate
+        canvas.accessibilityDescription = image.accessibilityDescription
+        return canvas
+    }
+
     private func badged(_ base: NSImage) -> NSImage {
         let image = NSImage(size: base.size, flipped: false) { rect in
             base.draw(in: rect)
