@@ -295,7 +295,11 @@ final class AppModel: ObservableObject {
         relaunchSelf()
     }
 
+    /// Called on every open. The popover keeps its SwiftUI view, so the view's onAppear/onDisappear fire only
+    /// once per launch: what must happen per open lives here.
     func prepareForDisplay() {
+        setPointerOverPanel(false) // a hold left over from the last open (the panel closed under the pointer)
+        layoutChangedAt = ProcessInfo.processInfo.systemUptime // a panel that just opened under the pointer
         query = ""
         selection = visible.first?.id
         pollStatus()
