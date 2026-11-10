@@ -27,12 +27,10 @@ struct PanelView: View {
         .frame(width: 360)
         // Rows hold still while the pointer is anywhere over the panel (footer included, so it can't jump either).
         .onHover { model.setPointerOverPanel($0) }
-        .onAppear {
+        .onAppear { // first open only: the popover keeps this view (per-open work is in prepareForDisplay)
             searchFocused = true
             bannerVersion = model.availableUpdate
-            model.layoutChangedAt = ProcessInfo.processInfo.systemUptime // a panel that just opened under the pointer
         }
-        .onDisappear { model.setPointerOverPanel(false) }
         .onChange(of: model.availableUpdate) { if !model.layoutHold.isOn { bannerVersion = $0 } }
         .onChange(of: model.layoutHold.isOn) { if !$0 { bannerVersion = model.availableUpdate } }
         // Click protection: note every time the rows move on screen.

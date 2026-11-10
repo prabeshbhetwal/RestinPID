@@ -29,6 +29,12 @@ import AppKit
         "unmoved=\(unmoved) parked=\(parked)")
   m.layoutChangedAt = ProcessInfo.processInfo.systemUptime; let blocked = !m.clickIsSafe()
   m.layoutChangedAt -= clickGuardInterval; print("20 click guard:", blocked && m.clickIsSafe() ? "PASS" : "FAIL")
+  // Reopening the panel (the popover keeps its view, so SwiftUI's onAppear/onDisappear don't fire again):
+  // the click guard restarts and a hold left over from the last open ends.
+  m.setPointerOverPanel(true); m.prepareForDisplay()
+  let guarded = !m.clickIsSafe(), released = !m.layoutHold.isOn
+  m.layoutChangedAt -= clickGuardInterval
+  print("21 reopen restarts guard, ends hold:", guarded && released ? "PASS" : "FAIL", "guarded=\(guarded) released=\(released)")
   // Needs Attention: on top by default, after every calm app when set to the bottom
   let onTop = m.visible.first?.bundleID == "com.test.ARDummy"
   m.attentionOnTop = false
